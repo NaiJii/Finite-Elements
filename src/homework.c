@@ -7,30 +7,35 @@ Une pression c'est une condition de Neuman normale.
 
 
 void geoMeshGenerate() {
-
+    int ierr;
     femGeo* theGeometry = geoGetGeometry();
 
     double w = theGeometry->LxPlate;
     double h = theGeometry->LyPlate;
+    double r = w * 0.5;
 
-    int ierr;
-    double r = w / 2.0;
-    int idRect = gmshModelOccAddRectangle(0, h/2, 0.0, h, w, -1, 0, &ierr);
-    int idHalfRect = gmshModelOccAddRectangle(0.0, 0.0, 0.0, h / 2.0, w / 2.0, -1, 0, &ierr);
-    //int idDiskTop = gmshModelOccAddDisk(w/2.0, 0.0, 0.0, r, r, -1, NULL, 0, NULL, 0, &ierr);
-    //int idDiskBottom = gmshModelOccAddDisk(w/2.0, h+h/2.0, 0.0, r, r, -1, NULL, 0, NULL, 0, &ierr);
+    int fusedTop[2] = { 2,-1 };
+    size_t fusedTopDim = 2;
 
-    int rect[] = { 2,idRect };
-    //int diskTop[] = { 2,idDiskTop };
-    //int diskBottom[] = { 2,idDiskBottom };
-    int halfRect[] = { 2,idHalfRect};
+    int fusedAll[2] = { 2,-1 };
+    size_t fusedAllDim = 2;
 
-    int out[] = { 2,-1};
-    size_t outDim = 2;
+    int cutAll[2] = { 2,-1 };
+    size_t cutAllDim = 2;
 
-    //gmshModelOccFuse(rect, 2, diskTop, 2, &out, &outDim, NULL, NULL, NULL, -1, 1, 1, &ierr);
-    //gmshModelOccFuse(rect, 2, diskBottom, 2, &out, &outDim, NULL, NULL, NULL, -1, 1, 1, &ierr);
-    gmshModelOccCut(rect, 2, halfRect, 2, NULL, NULL, NULL, NULL, NULL, -1, 1, 1, &ierr);
+    double rectPos[] = { 0.0, h * 0.5 };
+    double rectSize[] = { w, h };
+    double topDiskPos[] = { w * 0.5, h * 1.5 };
+    double bottomDiskPos[] = { w * 0.5, h * 0.5 };
+
+    int rect[] = { 2, gmshModelOccAddRectangle(rectPos[0], rectPos[1], 0.0, rectSize[0], rectSize[1], -1, 0.0, &ierr)};
+    int halfRect[] = { 2, gmshModelOccAddRectangle(rectPos[0], 0.0, 0.0, rectSize[0] * 0.5, rectSize[1] * 2.0, -1, 0, &ierr) };
+    int diskTop[] = { 2, gmshModelOccAddDisk(topDiskPos[0], topDiskPos[1], 0.0, r, r, -1, NULL, 0, NULL, 0, &ierr)};
+    int diskBottom[] = { 2, gmshModelOccAddDisk(bottomDiskPos[0], bottomDiskPos[1], 0.0, r, r, -1, NULL, 0, NULL, 0, &ierr) };
+
+    gmshModelOccFuse(rect, rect[0], diskTop, diskTop[0], NULL,NULL, NULL, NULL, NULL, -1, 1, 1, &ierr);
+    gmshModelOccFuse(rect, rect[0], diskBottom, diskBottom[0], NULL, NULL, NULL, NULL, NULL, -1, 1, 1, &ierr);
+    gmshModelOccCut(rect, rect[0], halfRect, halfRect[0], NULL, NULL, NULL, NULL, NULL, -1, 1, 1, &ierr);
 
     gmshModelOccSynchronize(&ierr);
 

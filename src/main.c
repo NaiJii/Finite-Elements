@@ -17,9 +17,12 @@ int main(void)
     printf("    D : Domains \n");
     printf("    N : Next domain highlighted\n\n\n");
 
+    // dimensions de la bonbonne en m
     // dimension d'une bouteille de gaz de 35Kg de propane
-    double Lx = 0.306; // 30.6 cm
-    double Ly = 1.47 / 2.0; // 147 cm
+
+    double dim[2] = {0.306, 1.47};
+    double Lx = dim[0]; // 30.6 cm
+    double Ly = dim[1] * 0.5; // 147 cm
       
     geoInitialize();
     femGeo* theGeometry = geoGetGeometry();
@@ -31,8 +34,10 @@ int main(void)
   
     geoMeshGenerate();
     geoMeshImport();
-    geoSetDomainName(0,"Symmetry");
-    geoSetDomainName(3,"Bottom");
+    geoSetDomainName(0,"Side");
+    geoSetDomainName(1,"Bottom");
+    geoSetDomainName(2,"Symmetry");
+    geoSetDomainName(3,"Top");
         
 //
 //  -2- Creation probleme 
@@ -54,7 +59,7 @@ int main(void)
 //
     
     femNodes *theNodes = theGeometry->theNodes;
-    double deformationFactor = 1e1;
+    double deformationFactor = 0;
     double *normDisplacement = malloc(theNodes->nNodes * sizeof(double));
     
     for (int i=0; i<theNodes->nNodes; i++){
