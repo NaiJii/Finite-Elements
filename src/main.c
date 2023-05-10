@@ -13,6 +13,8 @@
 
 int main(void)
 {  
+    // blabla, ceci est un changement que je veux push sur le serveur.
+
     printf("\n\n    V : Mesh and displacement norm \n");
     printf("    D : Domains \n");
     printf("    N : Next domain highlighted\n\n\n");
@@ -50,7 +52,7 @@ int main(void)
     femProblem* theProblem = femElasticityCreate(theGeometry,E,nu,rho,g,PLANAR_STRAIN);
     femElasticityAddBoundaryCondition(theProblem,"Symmetry",DIRICHLET_X,0.0);
     femElasticityAddBoundaryCondition(theProblem,"Bottom",DIRICHLET_Y,0.0);
-    femElasticityAddBoundaryCondition(theProblem,"Top",DIRICHLET_Y,0.0);
+    //femElasticityAddBoundaryCondition(theProblem,"Top",DIRICHLET_Y,0.0);
     femElasticityPrint(theProblem);
     double *theSoluce = femElasticitySolve(theProblem); 
    
@@ -60,7 +62,7 @@ int main(void)
 //
     
     femNodes *theNodes = theGeometry->theNodes;
-    double deformationFactor = 1e6;
+    double deformationFactor = 1e1;
     double *normDisplacement = malloc(theNodes->nNodes * sizeof(double));
     
     for (int i=0; i<theNodes->nNodes; i++){
