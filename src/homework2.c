@@ -5,7 +5,9 @@ void geoMeshGenerate() {
 
 	double w = theGeometry->LxPlate;
 	double h = theGeometry->LyPlate;
-
+	/// <summary>
+	/// waow
+	/// </summary>
 	int ierr;
 	double r = w / 4;
 	int idRect = gmshModelOccAddRectangle(0.0, 0.0, 0.0, w, h, -1, 0.0, &ierr);
