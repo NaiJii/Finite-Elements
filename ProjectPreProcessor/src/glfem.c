@@ -364,8 +364,8 @@ void glfemPlotDomain(femDomain *theDomain){
     int i,j,*nodes;
     femMesh *theMesh = theDomain->mesh;
     int nLocalNode = theMesh->nLocalNode;
-    float  xLoc[nLocalNode];
-    float  yLoc[nLocalNode];
+    float* xLoc = malloc(nLocalNode*sizeof(float));
+    float* yLoc = malloc(nLocalNode*sizeof(float));
     glColor3f(0.0, 0.0, 0.0);
 
     glfemPlotMesh(theMesh);
@@ -384,6 +384,9 @@ void glfemPlotDomain(femDomain *theDomain){
         
          }
          glLineWidth(1);
+
+    free(xLoc);
+    free(yLoc);
 }
 
 

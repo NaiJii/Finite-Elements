@@ -17,6 +17,8 @@
 #include <string.h>
 #include "gmshc.h"
 
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
 
 #define ErrorScan(a)   femErrorScan(a,__LINE__,__FILE__)
 #define ErrorGmsh(a)   femErrorGmsh(a,__LINE__,__FILE__)
