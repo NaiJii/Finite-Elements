@@ -15,11 +15,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include "gmshc.h"
 
 
 #define ErrorScan(a)   femErrorScan(a,__LINE__,__FILE__)
-#define ErrorGmsh(a)   femErrorGmsh(a,__LINE__,__FILE__)
 #define Error(a)       femError(a,__LINE__,__FILE__)
 #define Warning(a)     femWarning(a,  __LINE__, __FILE__)
 #define FALSE 0 
@@ -27,7 +25,8 @@
 #define MAXNAME 256
 
 typedef enum {FEM_TRIANGLE,FEM_QUAD} femElementType;
-typedef enum {DIRICHLET_X,DIRICHLET_Y} femBoundaryType;
+typedef enum {DIRICHLET_X,DIRICHLET_Y,DIRICHLET_N,DIRICHLET_T,
+              NEUMANN_X,NEUMANN_Y,NEUMANN_N,NEUMANN_T} femBoundaryType;
 typedef enum {PLANAR_STRESS,PLANAR_STRAIN,AXISYM} femElasticCase;
 
 
@@ -118,6 +117,7 @@ void                geoMeshRead(const char *filename);
 void                geoSetDomainName(int iDomain, char *name);
 int                 geoGetDomain(char *name);
 void                geoFinalize();
+void                geoFree();
 
 femProblem*         femElasticityCreate(femGeo* theGeometry, 
                                       double E, double nu, double rho, double g, femElasticCase iCase);
@@ -125,6 +125,11 @@ void                femElasticityFree(femProblem *theProblem);
 void                femElasticityPrint(femProblem *theProblem);
 void                femElasticityAddBoundaryCondition(femProblem *theProblem, char *nameDomain, femBoundaryType type, double value);
 double*             femElasticitySolve(femProblem *theProblem);
+void                femElasticityWrite(femProblem *theProbconst, const char *filename);
+femProblem*         femElasticityRead(femGeo* theGeometry, const char *filename);
+
+void                femFieldWrite(int size, int shift, double* value, const char *filename);
+int                 femFieldRead(int* size, int shift, double* value, const char *filename);
 
 femIntegration*     femIntegrationCreate(int n, femElementType type);
 void                femIntegrationFree(femIntegration *theRule);
