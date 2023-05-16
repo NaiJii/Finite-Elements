@@ -12,6 +12,8 @@
 
 #include "glfem.h"
 
+#define OUR_GEO
+
 int main(void)
 {
 	//
@@ -26,7 +28,7 @@ int main(void)
 	theGeometry->LxPlate = Lx;
 	theGeometry->LyPlate = Ly;
 	theGeometry->h = Lx * 0.05;
-	theGeometry->elementType = FEM_QUAD;
+	theGeometry->elementType = FEM_TRIANGLE;
 
 	//    geoMeshGenerate();      // Utilisation de OpenCascade
 
@@ -34,12 +36,23 @@ int main(void)
 								// Attention : les entités sont différentes !
 								// On a aussi inversé la géomtrie pour rire !
 
+#ifdef OUR_GEO
+	geoMeshGenerateGeoFile("../../../data/our_mesh.geo");   // Lecture fichier geo
+#else
 	geoMeshGenerateGeoFile("../../../data/mesh.geo");   // Lecture fichier geo
+#endif
 
 	geoMeshImport();
+#ifdef OUR_GEO
+	geoMeshGenerateGeoFile("../../../data/our_mesh.geo");   // Lecture fichier geo
+	geoSetDomainName(1, "Bottom");
+	geoMeshWrite("../../../data/our_mesh.txt");
+#else
+	geoMeshGenerateGeoFile("../../../data/mesh.geo");   // Lecture fichier geo
 	geoSetDomainName(0, "Symetry");
-	geoSetDomainName(7, "Bottom");
+	geoSetDomainName(1, "Bottom");
 	geoMeshWrite("../../../data/mesh.txt");
+#endif
 
 	//
 	//  -2- Definition du probleme
@@ -50,10 +63,16 @@ int main(void)
 	double rho = 7.85e3;
 	double g = 9.81;
 	femProblem* theProblem = femElasticityCreate(theGeometry, E, nu, rho, g, PLANAR_STRAIN);
+
+#ifdef OUR_GEO
+	femElasticityPrint(theProblem);
+	femElasticityWrite(theProblem, "../../../data/our_problem.txt");
+#else
 	femElasticityAddBoundaryCondition(theProblem, "Symetry", DIRICHLET_X, 0.0);
 	femElasticityAddBoundaryCondition(theProblem, "Bottom", DIRICHLET_Y, 0.0);
 	femElasticityPrint(theProblem);
 	femElasticityWrite(theProblem, "../../../data/problem.txt");
+#endif
 
 	//
 	//  -3- Champ de la taille de référence du maillage
