@@ -181,16 +181,90 @@ double *femElasticitySolve(femProblem *theProblem) {
 }
 
 
+double* Tension(femProblem* theProblem, double* UV) {
 
-//BROUILLION:
-// Calcul du vecteur des contraintes Neumann
-//double neumannX = 0.0;
-///double neumannY = 0.0;
-//for (i = 0; i < theSpace->n; i++) {
-    //neumannX += phi[i];
-    //neumannY += phi[i];// *theProblem->conditions[map[i]]->value* dphidy[i]}
+    femDiscrete* theSpace = theProblem->space;
+    femGeo* theGeometry = theProblem->geometry;
+    femNodes* theNodes = theGeometry->theNodes;
+    femMesh* theMesh = theGeometry->theElements;
+    int nLocal = theMesh->nLocalNode;
+    double a = theProblem->A;
+    double b = theProblem->B;
+    double c = theProblem->C;
+    
+    int taille = 4;
+    if (theProblem->planarStrainStress == AXISYM) { taille = 5; }
 
-// Ajout des contributions des conditions de Neumann dans le système
-//for (i = 0; i < theSpace->n; i++) {
-    //B[mapX[i]] += neumannX * jac * weight;
-    //B[mapY[i]] += neumannY * jac * weight;}
+    double* U = &UV[0];
+    double* V = &UV[1];
+    double* xsi = malloc(sizeof(double) * nLocal);
+    double* eta = malloc(sizeof(double) * nLocal);
+    double* dphidxsi = malloc(sizeof(double) * nLocal);
+    double* dphideta = malloc(sizeof(double) * nLocal);
+    double* dphidx = malloc(sizeof(double) * nLocal);
+    double* dphidy = malloc(sizeof(double) * nLocal);
+    femDiscreteXsi2(theSpace, xsi, eta);
+
+    int* NEXT = malloc(sizeof(int) * 10);  
+    double* e = malloc(sizeof(double) * taille);
+    double* sigma = malloc(sizeof(double) * theNodes->nNodes * taille);
+
+    for (int i = 0; i < theNodes->nNodes; i++) {
+        int count = -1;
+        int c;
+        for (int j = 0; j < theMesh->nElem * nLocal; j++) { 
+            if (theMesh->elem[j] == i) {
+                c = j % nLocal;
+                NEXT[count++] = j - c;     
+            }
+        }
+        double* dphidx = malloc(sizeof(double) * nLocal);
+        double* dphidy = malloc(sizeof(double) * nLocal);
+        double* dphidxsi = malloc(sizeof(double) * nLocal);
+        double* dphideta = malloc(sizeof(double) * nLocal);
+        for (int j = 0; j < count; j++) {  
+            double dxdxsi = 0.0;
+            double dydxsi = 0.0;
+            double dydeta = 0.0;
+            double dxdeta = 0.0;
+            for (int k = 0; k < nLocal; k++) {
+                femDiscreteDphi2(theSpace, xsi[c], eta[c], dphidxsi, dphideta);
+                dxdxsi += theNodes->X[theMesh->elem[NEXT[j] + k]] * dphidxsi[k];
+                dydxsi += theNodes->Y[theMesh->elem[NEXT[j] + k]] * dphidxsi[k];
+                dydeta += theNodes->Y[theMesh->elem[NEXT[j] + k]] * dphideta[k];
+                dxdeta += theNodes->X[theMesh->elem[NEXT[j] + k]] * dphideta[k];
+            }
+            double A = dydeta * dxdxsi;
+            double B = dydxsi * dxdeta;
+            double J = fabs(A - B);
+            for (int l = 0; l < nLocal; l++) {
+                dphidx[l] = (dphidxsi[l] * dydeta - dphideta[l] * dydxsi) / J;
+                dphidy[l] = (dphideta[l] * dxdxsi - dphidxsi[l] * dxdeta) / J;
+            }
+            for (int m = 0; m < nLocal; m++) {
+                int index = NEXT[j] + m;
+                e[0] += (dphidx[m] * U[2 * theMesh->elem[index]]);
+                e[1] += (dphidy[m] * V[2 * theMesh->elem[index]]);
+                e[2] += (dphidx[m] * V[2 * theMesh->elem[index]] + dphidy[m] * U[2 * theMesh->elem[index]]) / 2;
+                e[3] += (dphidy[m] * U[2 * theMesh->elem[index]] + dphidx[m] * V[2 * theMesh->elem[index]]) / 2;
+            }
+        }
+        int sigmaIndex = i * taille;
+        sigma[sigmaIndex] = a * e[0] + b * e[1];
+        sigma[sigmaIndex + 1] = a * e[1] + b * e[0];
+        sigma[sigmaIndex + 2] = 2 * c * e[2];
+        sigma[sigmaIndex + 3] = 2 * c * e[3];
+        if (theProblem->planarStrainStress == AXISYM) {
+            e[4] += U[2 * theMesh->elem[i]] / theNodes->X[i];
+            sigma[sigmaIndex] += b * e[4];
+            sigma[sigmaIndex + 1] += b * e[4];
+            sigma[sigmaIndex + 4] = b * (e[0] + e[1]) + a * e[4];}
+        free(dphidx);
+        free(dphidy);
+        free(dphidxsi);
+        free(dphideta);
+        free(e);
+        free(NEXT);
+    }
+    return sigma;
+}

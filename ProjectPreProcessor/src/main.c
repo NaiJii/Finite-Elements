@@ -12,7 +12,7 @@
 
 #include "glfem.h"
 
-#define OUR_GEO
+//#define OUR_GEO
 
 int main(void)
 {
