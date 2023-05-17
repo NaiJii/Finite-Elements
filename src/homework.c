@@ -310,13 +310,13 @@ int getMin(int arr[], int size) {
 }
 
 int SolveurBande(femMesh* theMesh) {
-    int iElem, j, myMax, myMin, myBand, map[4];
+    int myMax, myMin, myBand, map[4];
     int nLocal = theMesh->nLocalNode;
     myBand = 0;
 
-    for (iElem = 0; iElem < theMesh->nElem; iElem++) {
-        for (j = 0; j < nLocal; ++j) {
-            map[j] = theMesh->_enum[theMesh->elem[iElem * nLocal + j]];
+    for (int i = 0; i < theMesh->nElem; i++) {
+        for (int j = 0; j < nLocal; ++j) {
+            map[j] = theMesh->_enum[theMesh->elem[i * nLocal + j]];
         }
         myMax = getMax(map, nLocal);
         myMin = getMin(map, nLocal);
