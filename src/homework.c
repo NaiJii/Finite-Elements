@@ -19,10 +19,7 @@ int cmp(const void* a, const void* b) {
 }
 
 // renumeration des noeuds
-void femMeshRenumber(femMesh* theMesh, femRenumType renumType) {  
-    if (renumType == RENUM_NONE)
-        return;
-    
+void femMeshRenumber(femMesh* theMesh, femRenumType renumType) {     
     const int num = theMesh->nodes->nNodes;
     int* renumNodes = malloc(num * sizeof(int));
 
@@ -41,6 +38,8 @@ void femMeshRenumber(femMesh* theMesh, femRenumType renumType) {
     else if (renumType == RENUM_Y) {
         vec = theMesh->nodes->Y;
 	}
+    else if (renumType == RENUM_NONE) {
+    }
     else {
         Error("No such renumType in femMeshRenum");
 	}
@@ -48,8 +47,7 @@ void femMeshRenumber(femMesh* theMesh, femRenumType renumType) {
     qsort(renumNodes, num, sizeof(int), cmp);
 
     for (int i = 0; i < num; ++i) {
-		const int idx = renumNodes[i];
-        theMesh->number[idx] = i;
+        theMesh->number[renumNodes[i]] = i;
     }
 
 	free(renumNodes);
@@ -93,7 +91,7 @@ double* femElasticitySolve(femProblem* theProblem) {
 
     femMeshRenumber(theMesh, RENUM_X);
     int band = femComputeBand(theMesh);
-    //printf("band = %d\n", band); 
+    printf("band = %d\n, size = %d\n", band, theSystem->size);
     for (iElem = 0; iElem < theMesh->nElem; iElem++) {
         for (j = 0; j < nLocal; j++) {
             map[j] = theMesh->elem[iElem * nLocal + j];
@@ -234,8 +232,14 @@ double* femElasticitySolve(femProblem* theProblem) {
             T[n * 2 + 1] /= normT;
 
             // print the normal and tangent components
-            printf("T: %f %f \n N: %f %f \n", T[n * 2], T[n * 2 + 1], N[n * 2], N[n * 2 + 1]);
+            //printf("T: %f %f \n N: %f %f \n", T[n * 2], T[n * 2 + 1], N[n * 2], N[n * 2 + 1]);
         }
+
+        for (int k = 0; k < nElem + 1; k++) {
+            printf("normale du noeud %d = (%f ; %f)\n", k, N[2 * k], N[2 * k + 1]);
+            printf("tangente du noeud %d = (%f ; %f)\n", k, T[2 * k], T[2 * k + 1]);
+        }
+
 
         //if (type == DIRICHLET_N || type == DIRICHLET_T ||
         //    type == NEUMANN_N || type == NEUMANN_T) {
