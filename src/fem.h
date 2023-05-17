@@ -28,6 +28,7 @@ typedef enum {FEM_TRIANGLE,FEM_QUAD} femElementType;
 typedef enum {DIRICHLET_X,DIRICHLET_Y,DIRICHLET_N,DIRICHLET_T,
               NEUMANN_X,NEUMANN_Y,NEUMANN_N,NEUMANN_T} femBoundaryType;
 typedef enum {PLANAR_STRESS,PLANAR_STRAIN,AXISYM} femElasticCase;
+typedef enum { RENUM_NONE, RENUM_X, RENUM_Y } femRenumType;
 
 
 typedef struct {
@@ -41,6 +42,7 @@ typedef struct {
     int nElem;
     int *elem;
     femNodes *nodes;
+    int* _enum;
 } femMesh;
 
 typedef struct {
