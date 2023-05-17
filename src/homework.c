@@ -268,3 +268,43 @@ double* Tension(femProblem* theProblem, double* UV) {
     }
     return sigma;
 }
+
+
+int getMax(int arr[], int size) {
+    int max = arr[0];
+    for (int i = 1; i < size; i++) {
+        if (arr[i] > max) {
+            max = arr[i];
+        }
+    }
+    return max;
+}
+
+int getMin(int arr[], int size) {
+    int min = arr[0];
+    for (int i = 1; i < size; i++) {
+        if (arr[i] < min) {
+            min = arr[i];
+        }
+    }
+    return min;
+}
+
+int femMeshSolveurBande(femMesh* theMesh) {
+    int iElem, j, myMax, myMin, myBand, map[4];
+    int nLocal = theMesh->nLocalNode;
+    myBand = 0;
+
+    for (iElem = 0; iElem < theMesh->nElem; iElem++) {
+        for (j = 0; j < nLocal; ++j) {
+            map[j] = theMesh->_enum[theMesh->elem[iElem * nLocal + j]];
+        }
+        myMax = getMax(map, nLocal);
+        myMin = getMin(map, nLocal);
+        if (myBand < (myMax - myMin)) {
+            myBand = myMax - myMin;
+        }
+    }
+    myBand += 1;
+    return myBand;
+}
