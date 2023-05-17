@@ -290,7 +290,7 @@ int getMin(int arr[], int size) {
     return min;
 }
 
-int femMeshSolveurBande(femMesh* theMesh) {
+int SolveurBande(femMesh* theMesh) {
     int iElem, j, myMax, myMin, myBand, map[4];
     int nLocal = theMesh->nLocalNode;
     myBand = 0;
