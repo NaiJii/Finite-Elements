@@ -185,8 +185,53 @@ double* femElasticitySolve(femProblem* theProblem) {
 
         int* elem = cond->domain->elem;
         int nElem = cond->domain->nElem;
+        int nNodes = nElem + 1;
         double* X = mesh->nodes->X;
         double* Y = mesh->nodes->X;
+        // array of [x,y] 
+        double* N = malloc(nNodes * sizeof(double) * 2);
+        double* T = malloc(nNodes * sizeof(double) * 2);
+        memset(N, 0, nNodes * sizeof(double) * 2);
+        memset(T, 0, nNodes * sizeof(double) * 2);
+
+        for (int e = 0; e < nElem; e++) {
+            // both nodes of segment n
+            int a = mesh->elem[elem[e] * 2];
+            int b = mesh->elem[elem[e] * 2 + 1];
+            double aPos[2] = { X[a], Y[a] };
+            double bPos[2] = { X[b], Y[b] };
+            // node n
+            N[e * 2] += aPos[1] - bPos[1];
+            N[e * 2 + 1] += bPos[0] - aPos[0];
+            T[e * 2] += bPos[0] - aPos[0];
+            T[e * 2 + 1] += bPos[1] - aPos[1];
+            // node n+1
+            N[e * 2 + 2] += aPos[1] - bPos[1];
+            N[e * 2 + 3] += bPos[0] - aPos[0];
+            T[e * 2 + 2] += bPos[0] - aPos[0];
+            T[e * 2 + 3] += bPos[1] - aPos[1];
+        }
+
+        // toutes les tangentes et normales sont definies, on les normalise
+        for (int n = 0; n < nNodes; n++) {
+            double normN = sqrt(pow(N[n * 2], 2.0) + pow(N[n * 2 + 1], 2.0));
+            if (normN == 0.0)
+                Error("0,0 position for T");
+
+            N[n * 2] /= normN;
+            N[n * 2 + 1] /= normN;
+
+            double normT = sqrt(pow(T[n * 2], 2.0) + pow(T[n * 2 + 1], 2.0));
+            if (normT == 0.0)
+                Error("0,0 position for T");
+
+            T[n * 2] /= normT;
+            T[n * 2 + 1] /= normT;
+        }
+
+        //if (type == DIRICHLET_N || type == DIRICHLET_T ||
+        //    type == NEUMANN_N || type == NEUMANN_T) {
+        //}
 
 
     }
