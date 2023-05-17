@@ -1,6 +1,8 @@
 #include "fem.h"
 #include <math.h>
 
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
 
 // Il faut un fifrelin generaliser ce code.....
 //  (1) Ajouter l'axisymétrique !    (mandatory)
@@ -8,15 +10,16 @@
 //  (3) Ajouter les conditions en normal et tangentiel !   (strongly advised)
 //  (4) Et remplacer le solveur plein par un truc un fifrelin plus subtil  (mandatory)
 
-int cmp(void* v, const void* a, const void* b) {
-    double* vec = (double*)v; 
+double* vec = NULL;
+int cmp(const void* a, const void* b) {
+    //double* vec = (double*)v; 
 	const double x = vec[*(const int*)a];
     const double y = vec[*(const int*)b];
     return y - x; // TODO: check if this is correct
 }
 
 // renumeration des noeuds
-void femMeshRenum(femMesh* theMesh, femRenumType renumType) {  
+void femMeshRenumber(femMesh* theMesh, femRenumType renumType) {  
     if (renumType == RENUM_NONE)
         return;
     
@@ -30,23 +33,23 @@ void femMeshRenum(femMesh* theMesh, femRenumType renumType) {
     for (int i = 0; i < num; ++i)
 		renumNodes[i] = i;
 
-    double* v = NULL;
+    //double* v = NULL;
 
     if (renumType == RENUM_X) {
-        v = theMesh->nodes->X;
+        vec = theMesh->nodes->X;
     }
     else if (renumType == RENUM_Y) {
-        v = theMesh->nodes->Y;
+        vec = theMesh->nodes->Y;
 	}
     else {
         Error("No such renumType in femMeshRenum");
 	}
 
-    qsort_s(renumNodes, num, sizeof(int), cmp, v);
+    qsort(renumNodes, num, sizeof(int), cmp);
 
     for (int i = 0; i < num; ++i) {
 		const int idx = renumNodes[i];
-        theMesh->_enum[idx] = i;
+        theMesh->number[idx] = i;
     }
 
 	free(renumNodes);
@@ -87,11 +90,10 @@ double* femElasticitySolve(femProblem* theProblem) {
     double g   = theProblem->g;
     double **A = theSystem->A;
     double *B  = theSystem->B;  
-    femRenumType renumType = RENUM_NONE;
 
-    femMeshRenum(theMesh, renumType);
-
-    // band solver ... //    
+    femMeshRenumber(theMesh, RENUM_X);
+    int band = femComputeBand(theMesh);
+    //printf("band = %d\n", band); 
     for (iElem = 0; iElem < theMesh->nElem; iElem++) {
         for (j = 0; j < nLocal; j++) {
             map[j] = theMesh->elem[iElem * nLocal + j];
@@ -174,9 +176,11 @@ double* femElasticitySolve(femProblem* theProblem) {
 
     int nConditions = theProblem->nBoundaryConditions;
     for (int c = 0; c < nConditions; c++) {
-        femBoundaryCondition* cond = theProblem->conditions[i];
+        femBoundaryCondition* cond = theProblem->conditions[c];
         if (!cond)
             Error("No condition");
+
+        printf("Domain: %s", cond->domain->name);
 
         femBoundaryType type = cond->type;
         femMesh* mesh = cond->domain->mesh;
@@ -189,8 +193,8 @@ double* femElasticitySolve(femProblem* theProblem) {
         double* X = mesh->nodes->X;
         double* Y = mesh->nodes->X;
         // array of [x,y] 
-        double* N = malloc(nNodes * sizeof(double) * 2);
-        double* T = malloc(nNodes * sizeof(double) * 2);
+        double* N = calloc(nNodes, sizeof(double) * 2);
+        double* T = calloc(nNodes, sizeof(double) * 2);
         memset(N, 0, nNodes * sizeof(double) * 2);
         memset(T, 0, nNodes * sizeof(double) * 2);
 
@@ -214,6 +218,7 @@ double* femElasticitySolve(femProblem* theProblem) {
 
         // toutes les tangentes et normales sont definies, on les normalise
         for (int n = 0; n < nNodes; n++) {
+
             double normN = sqrt(pow(N[n * 2], 2.0) + pow(N[n * 2 + 1], 2.0));
             if (normN == 0.0)
                 Error("0,0 position for T");
@@ -227,26 +232,100 @@ double* femElasticitySolve(femProblem* theProblem) {
 
             T[n * 2] /= normT;
             T[n * 2 + 1] /= normT;
+
+            // print the normal and tangent components
+            printf("T: %f %f \n N: %f %f \n", T[n * 2], T[n * 2 + 1], N[n * 2], N[n * 2 + 1]);
         }
 
         //if (type == DIRICHLET_N || type == DIRICHLET_T ||
         //    type == NEUMANN_N || type == NEUMANN_T) {
         //}
 
+#if 0
+        if (cnd->type == DIRICHLET_N || cnd->type == DIRICHLET_T) {
+            // Itération sur tous les noeuds du domaine
+            for (int j = 0; j < nElem + 1; j++) {
+                // technique pour récupérer tous les noeuds sur base des éléments
+                if (j == nElem) {
+                    node0 = bndMesh->elem[2 * bndElem[j - 1] + 1];
+                }
+                else { node0 = bndMesh->elem[2 * bndElem[j]]; }
 
+                // Combinaison linéaire des lignes et colonnes de la matrice pour changer (U, V) en (N, T) (voir rapport)
+                double A_U, A_V, B_U, B_V, nx, ny, tx, ty;
+                nx = normales[2 * j];
+                ny = normales[2 * j + 1];
+                tx = tangentes[2 * j];
+                ty = tangentes[2 * j + 1];
+
+                B_U = B[2 * node0];
+                B_V = B[2 * node0 + 1];
+                B[2 * node0] = nx * B_U + ny * B_V;
+                B[2 * node0 + 1] = tx * B_U + ty * B_V;
+                // Modification des lignes
+                for (int k = 0; k < theSystem->size; k++) {
+                    A_U = A[2 * node0][k];
+                    A_V = A[2 * node0 + 1][k];
+                    A[2 * node0][k] = nx * A_U + ny * A_V;
+                    A[2 * node0 + 1][k] = tx * A_U + ty * A_V;
+                }
+                // Modification des colonnes
+                for (int k = 0; k < theSystem->size; k++) {
+                    A_U = A[k][2 * node0];
+                    A_V = A[k][2 * node0 + 1];
+                    A[k][2 * node0] = nx * A_U + ny * A_V;
+                    A[k][2 * node0 + 1] = tx * A_U + ty * A_V;
+                }
+            }
+        }
+#endif
+
+        if (type == DIRICHLET_N || type == DIRICHLET_T) {
+            for (int n = 0; n < nNodes; n++) {
+                int node = mesh->elem[elem[MIN(n, nElem - 1)]];
+                int shift = type == DIRICHLET_N ? 0 : 1;
+                femFullSystemConstrain(theSystem, node * 2 + shift, cond->value);
+            }
+        }
+
+        if (type >= NEUMANN_X && type <= NEUMANN_T) {
+            for (int e = 0; e < nElem; e++) {
+                int a = mesh->elem[2 * elem[e]];
+                int b = mesh->elem[2 * elem[e] + 1];
+                double jac = sqrt((X[a] - X[b]) * (X[a] - X[b]) + (Y[a] - Y[b]) * (Y[a] - Y[b])) * 0.5;
+
+                if (type == NEUMANN_X || type == NEUMANN_Y) {
+                    int shift = type == NEUMANN_X ? 0 : 1;
+                    B[a * 2 + shift] += jac * cond->value;
+                    B[b * 2 + shift] += jac * cond->value;
+                }
+                else if (type == NEUMANN_N || type == NEUMANN_T) { 
+                    double* xy = type == NEUMANN_N ? N : T;
+                    B[a * 2] += jac * cond->value * xy[e * 2];
+                    B[a * 2 + 1] += jac * cond->value * xy[2 * j + 1];
+                    B[b * 2] += jac * cond->value * xy[2 * j + 2];
+                    B[b * 2 + 1] += jac * cond->value * xy[2 * j + 3];
+                }
+            }
+        }
     }
 
     int *theConstrainedNodes = theProblem->constrainedNodes;     
     for (int i=0; i < theSystem->size; i++) {
         if (theConstrainedNodes[i] != -1) {
             double value = theProblem->conditions[theConstrainedNodes[i]]->value;
-            femFullSystemConstrain(theSystem,i,value); }}
+            femBoundaryType type = theProblem->conditions[theConstrainedNodes[i]]->type;
+
+            if (type == DIRICHLET_X || type == DIRICHLET_Y) {
+                femFullSystemConstrain(theSystem, i, value);
+            }
+        }
+    }
                             
     return femFullSystemEliminate(theSystem);
 }
 
-double* Tension(femProblem* theProblem, double* UV) {
-
+double* femTension(femProblem* theProblem, double* UV) {
     femDiscrete* theSpace = theProblem->space;
     femGeo* theGeometry = theProblem->geometry;
     femNodes* theNodes = theGeometry->theNodes;
@@ -256,8 +335,7 @@ double* Tension(femProblem* theProblem, double* UV) {
     double b = theProblem->B;
     double c = theProblem->C;
     
-    int taille = 4;
-    if (theProblem->planarStrainStress == AXISYM) { taille = 5; }
+    int taille = 4 + (theProblem->planarStrainStress != AXISYM ? 0 : 1);
 
     double* U = &UV[0];
     double* V = &UV[1];
@@ -354,21 +432,25 @@ int getMin(int arr[], int size) {
     return min;
 }
 
-int SolveurBande(femMesh* theMesh) {
-    int myMax, myMin, myBand, map[4];
+int femComputeBand(femMesh* theMesh) {
+    int map[4];
     int nLocal = theMesh->nLocalNode;
-    myBand = 0;
+    int myBand = 0;
 
     for (int i = 0; i < theMesh->nElem; i++) {
+        printf("number[%d] = %d\n", i, theMesh->number[i]);
         for (int j = 0; j < nLocal; ++j) {
-            map[j] = theMesh->_enum[theMesh->elem[i * nLocal + j]];
+            map[j] = theMesh->number[theMesh->elem[i * nLocal + j]];
         }
-        myMax = getMax(map, nLocal);
-        myMin = getMin(map, nLocal);
-        if (myBand < (myMax - myMin)) {
+        int myMin = map[0];
+        int myMax = map[0];
+        for (int j = 1; j < nLocal; j++) {
+            myMax = fmax(map[j], myMax);
+            myMin = fmin(map[j], myMin);
+        }
+        if (myBand < (myMax - myMin)) 
             myBand = myMax - myMin;
-        }
     }
-    myBand += 1;
-    return myBand;
+
+    return myBand + 1;
 }

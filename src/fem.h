@@ -42,7 +42,7 @@ typedef struct {
     int nElem;
     int *elem;
     femNodes *nodes;
-    int* _enum;
+    int* number;
 } femMesh;
 
 typedef struct {

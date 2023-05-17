@@ -24,6 +24,7 @@ void geoFree()
 	}
 	if (theGeometry.theElements) {
 		free(theGeometry.theElements->elem);
+		free(theGeometry.theElements->number);
 		free(theGeometry.theElements);
 	}
 	if (theGeometry.theEdges) {
@@ -216,6 +217,8 @@ void geoMeshRead(const char* filename)
 			if ((i + 1) != theDomain->nElem && (i + 1) % 10 == 0) ErrorScan(fscanf(file, "\n"));
 		}
 	}
+
+	theGeometry.theElements->number = malloc(sizeof(int) * theGeometry.theElements->nodes->nNodes);
 
 	fclose(file);
 }
@@ -575,7 +578,8 @@ void femElasticityAddBoundaryCondition(femProblem* theProblem, char* nameDomain,
 
 	int shift;
 	if (type == DIRICHLET_X)  shift = 0;
-	if (type == DIRICHLET_Y)  shift = 1;
+	else if (type == DIRICHLET_Y)  shift = 1;
+	else return;
 	int* elem = theBoundary->domain->elem;
 	int nElem = theBoundary->domain->nElem;
 	for (int e = 0; e < nElem; e++) {

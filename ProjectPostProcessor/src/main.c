@@ -39,7 +39,7 @@ int main(void)
 	//
 
 	femNodes* theNodes = theGeometry->theNodes;
-	double deformationFactor = 1e5;
+	double deformationFactor = 1e2;
 	double* normDisplacement = malloc(theNodes->nNodes * sizeof(double));
 
 	for (int i = 0; i < n; i++) {
