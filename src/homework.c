@@ -30,19 +30,15 @@ void femMeshRenumber(femMesh* theMesh, femRenumType renumType) {
     for (int i = 0; i < num; ++i)
 		renumNodes[i] = i;
 
-    //double* v = NULL;
-
     if (renumType == RENUM_X) {
         vec = theMesh->nodes->X;
     }
     else if (renumType == RENUM_Y) {
         vec = theMesh->nodes->Y;
 	}
-    else if (renumType == RENUM_NONE) {
-    }
-    else {
+    else if (renumType != RENUM_NONE) {
         Error("No such renumType in femMeshRenum");
-	}
+    }
 
     qsort(renumNodes, num, sizeof(int), cmp);
 
@@ -89,9 +85,11 @@ double* femElasticitySolve(femProblem* theProblem) {
     double **A = theSystem->A;
     double *B  = theSystem->B;  
 
-    femMeshRenumber(theMesh, RENUM_X);
-    int band = femComputeBand(theMesh);
-    printf("band = %d\n, size = %d\n", band, theSystem->size);
+    femMeshRenumber(theMesh, FEM_XNUM);
+    int bandWidth = femComputeBand(theMesh);
+
+    printf("band = %d\n, size = %d\n", bandWidth, theSystem->size);
+
     for (iElem = 0; iElem < theMesh->nElem; iElem++) {
         for (j = 0; j < nLocal; j++) {
             map[j] = theMesh->elem[iElem * nLocal + j];
@@ -134,11 +132,9 @@ double* femElasticitySolve(femProblem* theProblem) {
 
             for (i = 0; i < theSpace->n; i++) {
                 for (j = 0; j < theSpace->n; j++) {
-
                     if (problemCase == AXISYM) {
                         A[mapX[i]][mapX[j]] += (dphidx[i] * a * dphidx[j] * xphi +
-                            dphidy[i] * c * dphidy[j] * xphi +
-                            phi[i] * (b * dphidx[j] + a * phi[j] / xphi) +
+                            dphidy[i] * c * dphidy[j] * xphi + phi[i] * (b * dphidx[j] + a * phi[j] / xphi) +
                             dphidx[i] * b * phi[j]) * jac * weight;
                         A[mapX[i]][mapY[j]] += (dphidx[i] * b * dphidy[j] * xphi +
                             dphidy[i] * c * dphidx[j] * xphi +
@@ -190,54 +186,55 @@ double* femElasticitySolve(femProblem* theProblem) {
         int nNodes = nElem + 1;
         double* X = mesh->nodes->X;
         double* Y = mesh->nodes->X;
-        // array of [x,y] 
-        double* N = calloc(nNodes, sizeof(double) * 2);
-        double* T = calloc(nNodes, sizeof(double) * 2);
-        memset(N, 0, nNodes * sizeof(double) * 2);
-        memset(T, 0, nNodes * sizeof(double) * 2);
+        double* N = cond->domain->normals;
+        double* T = cond->domain->tangents;
 
-        for (int e = 0; e < nElem; e++) {
-            // both nodes of segment n
-            int a = mesh->elem[elem[e] * 2];
-            int b = mesh->elem[elem[e] * 2 + 1];
-            double aPos[2] = { X[a], Y[a] };
-            double bPos[2] = { X[b], Y[b] };
-            // node n
-            N[e * 2] += aPos[1] - bPos[1];
-            N[e * 2 + 1] += bPos[0] - aPos[0];
-            T[e * 2] += bPos[0] - aPos[0];
-            T[e * 2 + 1] += bPos[1] - aPos[1];
-            // node n+1
-            N[e * 2 + 2] += aPos[1] - bPos[1];
-            N[e * 2 + 3] += bPos[0] - aPos[0];
-            T[e * 2 + 2] += bPos[0] - aPos[0];
-            T[e * 2 + 3] += bPos[1] - aPos[1];
-        }
+        if (cond->domain->nComponents == 0) {
+            cond->domain->nComponents = mesh->nElem + 1;
 
-        // toutes les tangentes et normales sont definies, on les normalise
-        for (int n = 0; n < nNodes; n++) {
+            for (int e = 0; e < nElem; e++) {
+                // both nodes of segment n
+                int a = mesh->elem[elem[e] * 2];
+                int b = mesh->elem[elem[e] * 2 + 1];
+                double aPos[2] = { X[a], Y[a] };
+                double bPos[2] = { X[b], Y[b] };
+                // node n
+                N[e * 2] += aPos[1] - bPos[1];
+                N[e * 2 + 1] += bPos[0] - aPos[0];
+                T[e * 2] += bPos[0] - aPos[0];
+                T[e * 2 + 1] += bPos[1] - aPos[1];
+                // node n+1
+                N[e * 2 + 2] += aPos[1] - bPos[1];
+                N[e * 2 + 3] += bPos[0] - aPos[0];
+                T[e * 2 + 2] += bPos[0] - aPos[0];
+                T[e * 2 + 3] += bPos[1] - aPos[1];
+            }
 
-            double normN = sqrt(pow(N[n * 2], 2.0) + pow(N[n * 2 + 1], 2.0));
-            if (normN == 0.0)
-                Error("0,0 position for T");
+            // toutes les tangentes et normales sont definies, on les normalise
+            for (int n = 0; n < nNodes; n++) {
 
-            N[n * 2] /= normN;
-            N[n * 2 + 1] /= normN;
+                double normN = sqrt(pow(N[n * 2], 2.0) + pow(N[n * 2 + 1], 2.0));
+                if (normN == 0.0)
+                    Error("0,0 position for T");
 
-            double normT = sqrt(pow(T[n * 2], 2.0) + pow(T[n * 2 + 1], 2.0));
-            if (normT == 0.0)
-                Error("0,0 position for T");
+                N[n * 2] /= normN;
+                N[n * 2 + 1] /= normN;
 
-            T[n * 2] /= normT;
-            T[n * 2 + 1] /= normT;
+                double normT = sqrt(pow(T[n * 2], 2.0) + pow(T[n * 2 + 1], 2.0));
+                if (normT == 0.0)
+                    Error("0,0 position for T");
 
-            // print the normal and tangent components
-            //printf("T: %f %f \n N: %f %f \n", T[n * 2], T[n * 2 + 1], N[n * 2], N[n * 2 + 1]);
-        }
+                T[n * 2] /= normT;
+                T[n * 2 + 1] /= normT;
 
-        for (int k = 0; k < nElem + 1; k++) {
-            printf("normale du noeud %d = (%f ; %f)\n", k, N[2 * k], N[2 * k + 1]);
-            printf("tangente du noeud %d = (%f ; %f)\n", k, T[2 * k], T[2 * k + 1]);
+                // print the normal and tangent components
+                //printf("T: %f %f \n N: %f %f \n", T[n * 2], T[n * 2 + 1], N[n * 2], N[n * 2 + 1]);
+            }
+
+            for (int k = 0; k < nElem + 1; k++) {
+                printf("normale du noeud %d = (%f ; %f)\n", k, N[2 * k], N[2 * k + 1]);
+                printf("tangente du noeud %d = (%f ; %f)\n", k, T[2 * k], T[2 * k + 1]);
+            }
         }
 
 
@@ -326,7 +323,17 @@ double* femElasticitySolve(femProblem* theProblem) {
         }
     }
                             
-    return femFullSystemEliminate(theSystem);
+    double* B = femFullSystemEliminate(theSystem);
+
+    free(x);
+    free(y);
+    free(phi);
+    free(dphidxsi);
+    free(dphideta);
+    free(dphidx);
+    free(dphidy);    
+
+    return B;
 }
 
 double* femTension(femProblem* theProblem, double* UV) {
@@ -415,37 +422,16 @@ double* femTension(femProblem* theProblem, double* UV) {
     return sigma;
 }
 
-
-int getMax(int arr[], int size) {
-    int max = arr[0];
-    for (int i = 1; i < size; i++) {
-        if (arr[i] > max) {
-            max = arr[i];
-        }
-    }
-    return max;
-}
-
-int getMin(int arr[], int size) {
-    int min = arr[0];
-    for (int i = 1; i < size; i++) {
-        if (arr[i] < min) {
-            min = arr[i];
-        }
-    }
-    return min;
-}
-
 int femComputeBand(femMesh* theMesh) {
-    int map[4];
+    int map[4] = {0, 0, 0, 0};
     int nLocal = theMesh->nLocalNode;
     int myBand = 0;
 
     for (int i = 0; i < theMesh->nElem; i++) {
         printf("number[%d] = %d\n", i, theMesh->number[i]);
-        for (int j = 0; j < nLocal; ++j) {
+        for (int j = 0; j < nLocal; ++j) 
             map[j] = theMesh->number[theMesh->elem[i * nLocal + j]];
-        }
+       
         int myMin = map[0];
         int myMax = map[0];
         for (int j = 1; j < nLocal; j++) {
@@ -456,5 +442,5 @@ int femComputeBand(femMesh* theMesh) {
             myBand = myMax - myMin;
     }
 
-    return myBand + 1;
+    return myBand + 1; // largeur de la bande
 }

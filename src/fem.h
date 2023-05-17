@@ -28,7 +28,7 @@ typedef enum {FEM_TRIANGLE,FEM_QUAD} femElementType;
 typedef enum {DIRICHLET_X,DIRICHLET_Y,DIRICHLET_N,DIRICHLET_T,
               NEUMANN_X,NEUMANN_Y,NEUMANN_N,NEUMANN_T} femBoundaryType;
 typedef enum {PLANAR_STRESS,PLANAR_STRAIN,AXISYM} femElasticCase;
-typedef enum { RENUM_NONE, RENUM_X, RENUM_Y } femRenumType;
+typedef enum { FEM_NO, FEM_XNUM, FEM_YNUM } femRenumType;
 
 
 typedef struct {
@@ -50,6 +50,11 @@ typedef struct {
     int nElem;
     int *elem;
     char name[MAXNAME];
+
+    // count of normals/tangents
+    int nComponents;
+    double* normals;
+    double* tangents;
 } femDomain;
 
 typedef struct {

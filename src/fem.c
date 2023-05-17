@@ -208,6 +208,10 @@ void geoMeshRead(const char* filename)
 		femDomain* theDomain = malloc(sizeof(femDomain));
 		theGeometry.theDomains[iDomain] = theDomain;
 		theDomain->mesh = theEdges;
+		theDomain->nComponents = 0;
+		theDomain->normals = calloc(2 * (theEdges->nElem + 1), sizeof(double));
+		theDomain->tangents = calloc(2 * (theEdges->nElem + 1), sizeof(double));
+
 		ErrorScan(fscanf(file, "  Domain : %6d \n", &trash));
 		ErrorScan(fscanf(file, "  Name : %[^\n]s \n", (char*)&theDomain->name));
 		ErrorScan(fscanf(file, "  Number of elements : %6d\n", &theDomain->nElem));
