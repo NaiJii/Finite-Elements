@@ -126,7 +126,7 @@ int main(void)
 				glfemPlotField(theGeometry->theElements, field);
 				glfemPlotMesh(theGeometry->theElements);
 				glColor3f(1.0, 0.0, 0.0); glfemMessage(theMessage);
-				_sleep(400);
+				_sleep(100);
 				glfwSwapBuffers(window);
 				glfwPollEvents();
 				glfwGetFramebufferSize(window, &w, &h);
