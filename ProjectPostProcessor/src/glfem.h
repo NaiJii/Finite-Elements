@@ -27,7 +27,8 @@ int         glfemGetAction();
 void 		    glfemReshapeWindows(femNodes *theNodes, int width, int height);
 void 		    glfemPlotField(femMesh *theMesh, double *u);
 void 		    glfemPlotMesh(femMesh *theMesh);
-void        glfemPlotDomain(femDomain *theDomain);
+void            glfemPlotNumbers(femMesh* theMesh);
+void			glfemPlotDomain(femDomain *theDomain);
 
 void 		    glfemMessage(char *message);
 void 		    glfemDrawMessage(int h, int v, char *message);
