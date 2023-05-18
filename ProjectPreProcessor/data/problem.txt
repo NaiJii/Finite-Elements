@@ -4,7 +4,7 @@ Poisson ratio      :  3.0000000e-01
 Mass density       :  7.8500000e+03  
 Gravity            :  9.8100000e+00  
 Boundary condition :  Dirichlet-Y        =  0.0000000e+00 : Bottom
-Boundary condition :  Undefined          = -1.0000000e+01 : LeftIn
-Boundary condition :  Undefined          = -1.0000000e+01 : RightIn
-Boundary condition :  Undefined          = -1.0000000e+01 : TopIn
-Boundary condition :  Undefined          = -1.0000000e+01 : BottomIn
+Boundary condition :  Neumann-N        = -1.0000000e-01 : LeftIn
+Boundary condition :  Neumann-N        = -1.0000000e-01 : RightIn
+Boundary condition :  Neumann-N        = -1.0000000e-01 : TopIn
+Boundary condition :  Neumann-N        = -1.0000000e-01 : BottomIn

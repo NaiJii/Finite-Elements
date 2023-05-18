@@ -37,14 +37,15 @@ int main(void)
 								// On a aussi inversé la géomtrie pour rire !
 
 #ifdef OUR_GEO
-	geoMeshGenerateGeoFile("../../../data/our_mesh.geo");   // Lecture fichier geo
+	geoMeshGenerate();
+
 #else
 	geoMeshGenerateGeoFile("../../../data/mesh.geo");   // Lecture fichier geo
 #endif
 
 	geoMeshImport();
 #ifdef OUR_GEO
-	geoMeshGenerateGeoFile("../../../data/our_mesh.geo");   // Lecture fichier geo
+	//geoMeshGenerateGeoFile("../../../data/our_mesh.geo");   // Lecture fichier geo
 	geoSetDomainName(4, "Bottom");
 	geoSetDomainName(5, "Top");
 	geoSetDomainName(6, "LeftIn");
@@ -55,7 +56,7 @@ int main(void)
 	geoSetDomainName(2, "Right");
 	geoMeshWrite("../../../data/mesh.txt");
 #else
-	geoMeshGenerateGeoFile("../../../data/mesh.geo");   // Lecture fichier geo
+	//geoMeshGenerateGeoFile("../../../data/mesh.geo");   // Lecture fichier geo
 	geoSetDomainName(0, "Symetry");
 	geoSetDomainName(1, "Bottom");
 	geoMeshWrite("../../../data/mesh.txt");
@@ -72,25 +73,25 @@ int main(void)
 	femProblem* theProblem = femElasticityCreate(theGeometry, E, nu, rho, g, PLANAR_STRAIN);
 
 #ifdef OUR_GEO
-	// When should I use Dirichlet boundary conditions (displacements) ? 
+	// When should I use Dirichlet boundary conditions (displacements) ?
 	// When should I use Neumann boundary conditions (forces) ?
 	// What is the difference between Dirichlet and Neumann boundary conditions ?
 	// The Dirichlet boundary conditions are used to impose the displacement of the structure on the boundary.
 	// The Neumann boundary conditions are used to impose the forces on the boundary.
-	// In the case of a gas bottle, 
+	// In the case of a gas bottle,
 	// We want no displacement on the bottom of the bottle (Dirichlet boundary conditions)
 	femElasticityAddBoundaryCondition(theProblem, "Bottom", DIRICHLET_Y, 0.0);
 	// The gas is pushing from within the bottle (Neumann boundary conditions)
-	double gazPression = 1e1;
-	femElasticityAddBoundaryCondition(theProblem, "LeftIn", NEUMANN_N, -gazPression); // Towards the inside.
-	femElasticityAddBoundaryCondition(theProblem, "RightIn", NEUMANN_N, -gazPression); // Towards the inside.
-	femElasticityAddBoundaryCondition(theProblem, "TopIn", NEUMANN_N, -gazPression); // Towards the inside. 
-	femElasticityAddBoundaryCondition(theProblem, "BottomIn", NEUMANN_N, -gazPression); // Towards the inside.
+	double gazPression = 0.1;
+	femElasticityAddBoundaryCondition(theProblem, "LeftIn", NEUMANN_N, gazPression); // Towards the inside.
+	femElasticityAddBoundaryCondition(theProblem, "RightIn", NEUMANN_N, gazPression); // Towards the inside.
+	femElasticityAddBoundaryCondition(theProblem, "TopIn", NEUMANN_N, gazPression); // Towards the inside.
+	femElasticityAddBoundaryCondition(theProblem, "BottomIn", NEUMANN_N, gazPression); // Towards the inside.
 	//femElasticityAddBoundaryCondition(theProblem, "Bottom", NEUMANN_N, gazPression); // Towards the outside
 	//femElasticityAddBoundaryCondition(theProblem, "Top", NEUMANN_N, gazPression); // Towards the outside
 	//femElasticityAddBoundaryCondition(theProblem, "Left", NEUMANN_N, gazPression); // Towards the outside
 	//femElasticityAddBoundaryCondition(theProblem, "Right", NEUMANN_N, gazPression); // Towards the outside
-	
+
 	femElasticityPrint(theProblem);
 	femElasticityWrite(theProblem, "../../../data/problem.txt");
 #else

@@ -663,10 +663,9 @@ void femElasticityAddBoundaryCondition(femProblem *theProblem, char *nameDomain,
         theProblem->conditions = realloc(theProblem->conditions, size*sizeof(femBoundaryCondition*));
     theProblem->conditions[size-1] = theBoundary;
     
-    
     int shift;
-    if (type == DIRICHLET_X)  shift = 0;      
-    if (type == DIRICHLET_Y)  shift = 1;  
+    if (type == DIRICHLET_X || type == NEUMANN_X)  shift = 0;      
+    if (type == DIRICHLET_Y || type == NEUMANN_Y)  shift = 1;  
     int *elem = theBoundary->domain->elem;
     int nElem = theBoundary->domain->nElem;
     for (int e=0; e<nElem; e++) {
@@ -694,8 +693,14 @@ void femElasticityPrint(femProblem *theProblem)
           femBoundaryCondition *theCondition = theProblem->conditions[i];
           double value = theCondition->value;
           printf("  %20s :",theCondition->domain->name);
-          if (theCondition->type==DIRICHLET_X)  printf(" imposing %9.2e as the horizontal displacement  \n",value);
-          if (theCondition->type==DIRICHLET_Y)  printf(" imposing %9.2e as the vertical displacement  \n",value); }
+          if (theCondition->type == DIRICHLET_X)  printf(" imposing %9.2e as the horizontal displacement  \n", value);
+          if (theCondition->type == DIRICHLET_Y)  printf(" imposing %9.2e as the vertical displacement  \n", value);
+          if (theCondition->type == DIRICHLET_N)  printf(" imposing %9.2e as the normal displacement  \n", value);
+          if (theCondition->type == DIRICHLET_T)  printf(" imposing %9.2e as the tangent displacement  \n", value);
+          if (theCondition->type == NEUMANN_X)  printf(" imposing %9.2e as the horizontal pression  \n", value);
+          if (theCondition->type == NEUMANN_Y)  printf(" imposing %9.2e as the vertical pression  \n", value);
+          if (theCondition->type == NEUMANN_N)  printf(" imposing %9.2e as the normal pression  \n", value);
+          if (theCondition->type == NEUMANN_T)  printf(" imposing %9.2e as the tangent pression  \n", value);
     printf(" ======================================================================================= \n\n");
 }
 
@@ -720,8 +725,14 @@ void femElasticityWrite(femProblem *theProblem, const char *filename)
         double value = theCondition->value;
         fprintf(file,"Boundary condition : ");
         switch (theCondition->type) {
-            case DIRICHLET_X : fprintf(file," Dirichlet-X        = %14.7e ",value); break;
-            case DIRICHLET_Y : fprintf(file," Dirichlet-Y        = %14.7e ",value); break;
+        case DIRICHLET_X: fprintf(file, " Dirichlet-X        = %14.7e ", value); break;
+        case DIRICHLET_Y: fprintf(file, " Dirichlet-Y        = %14.7e ", value); break;
+        case DIRICHLET_N: fprintf(file, " Dirichlet-N        = %14.7e ", value); break;
+        case DIRICHLET_T: fprintf(file, " Dirichlet-T        = %14.7e ", value); break;
+        case NEUMANN_X: fprintf(file, " Neumann-X        = %14.7e ", value); break;
+        case NEUMANN_Y: fprintf(file, " Neumann-Y        = %14.7e ", value); break;
+        case NEUMANN_N: fprintf(file, " Neumann-N        = %14.7e ", value); break;
+        case NEUMANN_T: fprintf(file, " Neumann-T        = %14.7e ", value); break;
             default :          fprintf(file," Undefined          = %14.7e ",value); break; }
 
         fprintf(file,": %s\n",theCondition->domain->name); }
@@ -776,14 +787,22 @@ femProblem* femElasticityRead(femGeo* theGeometry, const char *filename)
             ErrorScan(fscanf(file,":  %le\n",&theProblem->g)); }
         if (strncasecmp(theLine,"Boundary condition  ",19) == 0) {
             ErrorScan(fscanf(file,":  %19s = %le : %[^\n]s\n",(char *)&theArgument,&value,(char *)&theDomain));
-            if (strncasecmp(theArgument,"Dirichlet-X",19) == 0)
+            if (_strnicmp(theArgument, "Dirichlet-X", 19) == 0)
                 typeCondition = DIRICHLET_X;
-            if (strncasecmp(theArgument,"Dirichlet-Y",19) == 0)
-                typeCondition = DIRICHLET_Y;                
-            if (strncasecmp(theArgument,"Neumann-X",19) == 0)
+            if (_strnicmp(theArgument, "Dirichlet-Y", 19) == 0)
+                typeCondition = DIRICHLET_Y;
+            if (_strnicmp(theArgument, "Dirichlet-N", 19) == 0)
+                typeCondition = DIRICHLET_N;
+            if (_strnicmp(theArgument, "Dirichlet-T", 19) == 0)
+                typeCondition = DIRICHLET_T;
+            if (_strnicmp(theArgument, "Neumann-X", 19) == 0)
                 typeCondition = NEUMANN_X;
-            if (strncasecmp(theArgument,"Neumann-Y",19) == 0)
-                typeCondition = NEUMANN_Y;                
+            if (_strnicmp(theArgument, "Neumann-Y", 19) == 0)
+                typeCondition = NEUMANN_Y;
+            if (_strnicmp(theArgument, "Neumann-N", 19) == 0)
+                typeCondition = NEUMANN_N;
+            if (_strnicmp(theArgument, "Neumann-T", 19) == 0)
+                typeCondition = NEUMANN_T;
             femElasticityAddBoundaryCondition(theProblem,theDomain,typeCondition,value); }
         ErrorScan(fscanf(file,"\n")); }
  

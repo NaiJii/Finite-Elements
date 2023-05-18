@@ -49,7 +49,7 @@ int main(void)
 	double* Xdef = malloc(n * sizeof(double));
 	double* Ydef = malloc(n * sizeof(double));
 
-	double deformationFactor = 1e2;
+	double deformationFactor = 1e7;
 	double* normDisplacement = malloc(n * sizeof(double));
 
 	for (int i = 0; i < n; i++) {

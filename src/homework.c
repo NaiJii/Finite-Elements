@@ -1,25 +1,14 @@
 #include "fem.h"
 #include <math.h>
 
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#define MAX(a,b) ((a) > (b) ? (a) : (b))
-
 // Il faut un fifrelin generaliser ce code.....
 //  (1) Ajouter l'axisymétrique !    (mandatory)
 //  (2) Ajouter les conditions de Neumann !   (mandatory)
 //  (3) Ajouter les conditions en normal et tangentiel !   (strongly advised)
 //  (4) Et remplacer le solveur plein par un truc un fifrelin plus subtil  (mandatory)
 
-double* vec = NULL;
-int femCompare(const void* a, const void* b) {
-	const double A = vec[*(const int*)a];
-	const double B = vec[*(const int*)b];
-	if (A < B) return 1;
-	if (A > B) return -1;
-	return 0;
-}
-
 // renumeration des noeuds
+#if 0
 void femMeshRenumber(femMesh* theMesh, femRenumType renumType) {
 	const int num = theMesh->nodes->nNodes;
 	int* renumNodes = malloc(num * sizeof(int));
@@ -56,6 +45,7 @@ void femMeshRenumber(femMesh* theMesh, femRenumType renumType) {
 
 	free(renumNodes);
 }
+#endif
 
 double* femElasticitySolve(femProblem* theProblem) {
 	femFullSystem* theSystem = theProblem->system;
@@ -93,9 +83,7 @@ double* femElasticitySolve(femProblem* theProblem) {
 	double** A = theSystem->A;
 	double* B = theSystem->B;
 
-	femMeshRenumber(theMesh, FEM_NO);
-	int bandWidth = femComputeBand(theMesh);
-
+	int bandWidth = femMeshComputeBand(theMesh);
 	printf("band = %d\n, size = %d\n", bandWidth, theSystem->size);
 
 	for (iElem = 0; iElem < theMesh->nElem; iElem++) {
@@ -119,16 +107,14 @@ double* femElasticitySolve(femProblem* theProblem) {
 			double dydxsi = 0.0;
 			double dydeta = 0.0;
 			// axisymmetry
-			double xphi = 0.0;
-			double yphi = 0.0; // unused because of gravity
+			double r = 0.0;
 
 			for (i = 0; i < theSpace->n; i++) {
 				dxdxsi += x[i] * dphidxsi[i];
 				dxdeta += x[i] * dphideta[i];
 				dydxsi += y[i] * dphidxsi[i];
 				dydeta += y[i] * dphideta[i];
-				xphi += x[i] * phi[i];
-				yphi += y[i] * phi[i]; // unused because of gravity
+				r += x[i] * phi[i];
 			}
 
 			double jac = fabs(dxdxsi * dydeta - dxdeta * dydxsi);
@@ -141,17 +127,17 @@ double* femElasticitySolve(femProblem* theProblem) {
 			for (i = 0; i < theSpace->n; i++) {
 				for (j = 0; j < theSpace->n; j++) {
 					if (problemCase == AXISYM) {
-						A[mapX[i]][mapX[j]] += (dphidx[i] * a * dphidx[j] * xphi +
-							dphidy[i] * c * dphidy[j] * xphi + phi[i] * (b * dphidx[j] + a * phi[j] / xphi) +
+						A[mapX[i]][mapX[j]] += (dphidx[i] * a * dphidx[j] * r +
+							dphidy[i] * c * dphidy[j] * r + phi[i] * (b * dphidx[j] + a * phi[j] / r) +
 							dphidx[i] * b * phi[j]) * jac * weight;
-						A[mapX[i]][mapY[j]] += (dphidx[i] * b * dphidy[j] * xphi +
-							dphidy[i] * c * dphidx[j] * xphi +
+						A[mapX[i]][mapY[j]] += (dphidx[i] * b * dphidy[j] * r +
+							dphidy[i] * c * dphidx[j] * r +
 							phi[i] * b * dphidy[j]) * jac * weight;
-						A[mapY[i]][mapX[j]] += (dphidy[i] * b * dphidx[j] * xphi +
-							dphidx[i] * c * dphidy[j] * xphi +
+						A[mapY[i]][mapX[j]] += (dphidy[i] * b * dphidx[j] * r +
+							dphidx[i] * c * dphidy[j] * r +
 							dphidy[i] * b * phi[j]) * jac * weight;
-						A[mapY[i]][mapY[j]] += (dphidy[i] * a * dphidy[j] * xphi +
-							dphidx[i] * c * dphidx[j] * xphi) * jac * weight;
+						A[mapY[i]][mapY[j]] += (dphidy[i] * a * dphidy[j] * r +
+							dphidx[i] * c * dphidx[j] * r) * jac * weight;
 					}
 					else {
 						A[mapX[i]][mapX[j]] += (dphidx[i] * a * dphidx[j] +
@@ -168,13 +154,14 @@ double* femElasticitySolve(femProblem* theProblem) {
 
 			for (i = 0; i < theSpace->n; i++) {
 				if (problemCase == AXISYM)
-					B[mapY[i]] -= phi[i] * g * rho * jac * weight * xphi;
+					B[mapY[i]] -= phi[i] * g * rho * jac * weight * r;
 				else
 					B[mapY[i]] -= phi[i] * g * rho * jac * weight;
 			}
 		}
 	}
 
+#if 0
 	int nConditions = theProblem->nBoundaryConditions;
 	for (int c = 0; c < nConditions; c++) {
 		femBoundaryCondition* cond = theProblem->conditions[c];
@@ -284,7 +271,7 @@ double* femElasticitySolve(femProblem* theProblem) {
 				int shift = type == DIRICHLET_N ? 0 : 1;
 				femFullSystemConstrain(theSystem, node * 2 + shift, cond->value);
 			}
-				}
+		}
 
 		if (type >= NEUMANN_X && type <= NEUMANN_T) {
 			for (int e = 0; e < nElem; e++) {
@@ -306,7 +293,8 @@ double* femElasticitySolve(femProblem* theProblem) {
 				}
 			}
 		}
-			}
+	}
+#endif
 
 	int* theConstrainedNodes = theProblem->constrainedNodes;
 	for (int i = 0; i < theSystem->size; i++) {
@@ -331,7 +319,7 @@ double* femElasticitySolve(femProblem* theProblem) {
 	free(dphidy);
 
 	return B;
-		}
+}
 
 double* femTension(femProblem* theProblem, double* UV) {
 	femDiscrete* theSpace = theProblem->space;
@@ -422,31 +410,4 @@ double* femTension(femProblem* theProblem, double* UV) {
 	free(dphideta);
 
 	return sigma;
-}
-
-int femComputeBand(femMesh* theMesh) {
-	int map[4] = { 0, 0, 0, 0 };
-	int nLocal = theMesh->nLocalNode;
-	int myBand = 0;
-	int myMin, myMax;
-
-	printf("nElem, nLocal: %d %d", theMesh->nElem, nLocal);
-
-	for (int iElem = 0; iElem < theMesh->nElem; iElem++) {
-		printf("number[%d] = %d\n", iElem, theMesh->number[iElem]);
-
-		for (int j = 0; j < nLocal; ++j)
-			map[j] = theMesh->number[theMesh->elem[iElem * nLocal + j]];
-
-		myMin = map[0];
-		myMax = map[0];
-		for (int j = 1; j < nLocal; j++) {
-			myMax = fmax(map[j], myMax);
-			myMin = fmin(map[j], myMin);
-		}
-		if (myBand < (myMax - myMin))
-			myBand = myMax - myMin;
-	}
-
-	return myBand + 1; // largeur de la bande
 }
