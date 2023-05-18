@@ -193,7 +193,6 @@ double* femElasticitySolve(femProblem* theProblem) {
 		double* Y = mesh->nodes->X;
 		double* N = cond->domain->normals;
 		double* T = cond->domain->tangents;
-		memset(N, 0, 2 * nNodes * sizeof(double));
 		memset(T, 0, 2 * nNodes * sizeof(double));
 
 		printf("[Boundary condition %d of type %d for domain %s (%d elems)]\n", c, type, cond->domain->name, nElem);
@@ -226,9 +225,6 @@ double* femElasticitySolve(femProblem* theProblem) {
 
 				T[n * 2] /= norm;
 				T[n * 2 + 1] /= norm;
-
-				// print the normal and tangent components
-				//printf("T: %f %f \n N: %f %f \n", T[n * 2], T[n * 2 + 1], N[n * 2], N[n * 2 + 1]);
 			}
 
 			// on sait que les normales sont perpendiculaires aux tangentes
@@ -288,7 +284,7 @@ double* femElasticitySolve(femProblem* theProblem) {
 				int shift = type == DIRICHLET_N ? 0 : 1;
 				femFullSystemConstrain(theSystem, node * 2 + shift, cond->value);
 			}
-		}
+				}
 
 		if (type >= NEUMANN_X && type <= NEUMANN_T) {
 			for (int e = 0; e < nElem; e++) {
@@ -310,7 +306,7 @@ double* femElasticitySolve(femProblem* theProblem) {
 				}
 			}
 		}
-	}
+			}
 
 	int* theConstrainedNodes = theProblem->constrainedNodes;
 	for (int i = 0; i < theSystem->size; i++) {
@@ -335,7 +331,7 @@ double* femElasticitySolve(femProblem* theProblem) {
 	free(dphidy);
 
 	return B;
-}
+		}
 
 double* femTension(femProblem* theProblem, double* UV) {
 	femDiscrete* theSpace = theProblem->space;
