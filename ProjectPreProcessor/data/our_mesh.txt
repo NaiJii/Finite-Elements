@@ -1951,18 +1951,18 @@ Number of triangles 1068
   1067 :    636    546    656
 Number of domains 10
   Domain :      0 
-  Name : Entity 0 
+  Name : Left
   Number of elements :     23
      0     1     2     3     4     5     6     7     8     9
     10    11    12    13    14    15    16    17    18    19
     20    21    22
   Domain :      1 
-  Name : Bottom
+  Name : Entity 1 
   Number of elements :     19
     23    24    25    26    27    28    29    30    31    32
     33    34    35    36    37    38    39    40    41
   Domain :      2 
-  Name : Entity 2 
+  Name : Right
   Number of elements :     23
     42    43    44    45    46    47    48    49    50    51
     52    53    54    55    56    57    58    59    60    61
@@ -1973,36 +1973,36 @@ Number of domains 10
     65    66    67    68    69    70    71    72    73    74
     75    76    77    78    79    80    81    82    83
   Domain :      4 
-  Name : Entity 4 
+  Name : Bottom
   Number of elements :     29
     84    85    86    87    88    89    90    91    92    93
     94    95    96    97    98    99   100   101   102   103
    104   105   106   107   108   109   110   111   112
   Domain :      5 
-  Name : Entity 5 
+  Name : Top
   Number of elements :     29
    113   114   115   116   117   118   119   120   121   122
    123   124   125   126   127   128   129   130   131   132
    133   134   135   136   137   138   139   140   141
   Domain :      6 
-  Name : Entity 6 
+  Name : LeftIn
   Number of elements :     23
    142   143   144   145   146   147   148   149   150   151
    152   153   154   155   156   157   158   159   160   161
    162   163   164
   Domain :      7 
-  Name : Entity 7 
+  Name : RightIn
   Number of elements :     23
    165   166   167   168   169   170   171   172   173   174
    175   176   177   178   179   180   181   182   183   184
    185   186   187
   Domain :      8 
-  Name : Entity 8 
+  Name : BottomIn
   Number of elements :     15
    188   189   190   191   192   193   194   195   196   197
    198   199   200   201   202
   Domain :      9 
-  Name : Entity 9 
+  Name : TopIn
   Number of elements :     15
    203   204   205   206   207   208   209   210   211   212
    213   214   215   216   217
