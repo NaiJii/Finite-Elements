@@ -9,7 +9,7 @@
 
 #include "fem.h"
 
-double* femTemp = NULL;
+
 
 femGeo theGeometry;
 
@@ -512,6 +512,114 @@ void  femFullSystemConstrain(femFullSystem* mySystem,
 	B[myNode] = myValue;
 }
 
+void femComputeBoundaryCondition(femProblem* theProblem, femBoundaryCondition* condition, int shift) {
+	femFullSystem* theSystem = theProblem->system;
+	femMesh* theMesh = theProblem->geometry->theElements;
+	int iCase = theProblem->planarStrainStress;
+
+	double** A = theSystem->A;
+	double* B = theSystem->B;
+
+	femBoundaryType condType = condition->type;
+	int* elem = condition->domain->elem;
+	int nElem = condition->domain->nElem;
+	femMesh* condMesh = condition->domain->mesh;
+	double* X = condMesh->nodes->X;
+	double* Y = condMesh->nodes->Y;
+	double* N = condition->domain->normals;
+	double* T = condition->domain->tangents;
+	memset(T, 0, 2 * (nElem + 1) * sizeof(double));
+
+	// Tangents and normals
+	for (int e = 0; e < nElem; e++) {
+		// both nodes of segment e
+		int a = condMesh->elem[elem[e] * 2];
+		int b = condMesh->elem[elem[e] * 2 + 1];
+
+		// tangent vector
+		double dx = X[b] - X[a];
+		double dy = Y[b] - Y[a];
+
+		T[e * 2] += dx;
+		T[e * 2 + 1] += dy;
+		T[(e + 1) * 2] += dx;
+		T[(e + 1) * 2 + 1] += dy;
+
+		printf("T[%d]: %f %f \n", e, T[e * 2], T[e * 2 + 1]);
+	}
+
+	// toutes les tangentes sont définies, on les normalise
+	for (int n = 0; n < nElem + 1; n++) {
+		double norm = sqrt(T[n * 2] * T[n * 2] + T[n * 2 + 1] * T[n * 2 + 1]);
+		if (norm == 0.0)
+			Error("0,0 position for T");
+
+		T[n * 2] /= norm;
+		T[n * 2 + 1] /= norm;
+	}
+
+	// on sait que les normales sont perpendiculaires aux tangentes
+	for (int n = 0; n < nElem + 1; n++) {
+		N[n * 2] = -T[n * 2 + 1]; // N.x = -T.y
+		N[n * 2 + 1] = T[n * 2]; // N.y = T.x
+	}
+
+	for (int k = 0; k < nElem + 1; k++) {
+		printf("normale du noeud %d = (%f ; %f)\n", k, N[2 * k], N[2 * k + 1]);
+		printf("tangente du noeud %d = (%f ; %f)\n", k, T[2 * k], T[2 * k + 1]);
+	}
+	//
+
+	printf("[Boundary condition of type %d for domain %s (%d elems)]\n", condType, condition->domain->name, nElem);
+
+	if (condType >= NEUMANN_X && condType <= NEUMANN_T) {
+		for (int i = 0; i < nElem; i++) {
+			int n0 = condMesh->elem[2 * elem[i]];
+			int n1 = condMesh->elem[2 * elem[i] + 1];
+
+			double J = 0.5 * sqrt((X[n0] - X[n1]) * (X[n0] - X[n1]) +
+				(Y[n1] - Y[n0]) * (Y[n1] - Y[n0]));
+
+			if (condType == NEUMANN_X || condType == NEUMANN_Y) {
+				double phi[2] = { 1,1 };
+				double x[2] = { 1,1 };
+
+				if (iCase == AXISYM) {
+					phi[0] = (1 + sqrt(3)) * 0.5;
+					phi[1] = (1 - sqrt(3)) * 0.5;
+					x[0] = X[n0] * phi[1] + X[n1] * phi[0];
+					x[1] = X[n0] * phi[0] + X[n1] * phi[1];
+				}
+
+				n0 = theMesh->number[n0];
+				n1 = theMesh->number[n1];
+				theProblem->system->B[2 * n0 + shift] += J * condition->value * x[0] * phi[1]; // n0.x - 1
+				theProblem->system->B[2 * n0 + shift] += J * condition->value * x[1] * phi[0]; // n0.x - 2
+				theProblem->system->B[2 * n1 + shift] += J * condition->value * x[0] * phi[1]; // n1.x - 1
+				theProblem->system->B[2 * n1 + shift] += J * condition->value * x[1] * phi[0]; // n1.x - 2
+
+				if (shift == -1) { 
+					theProblem->system->B[2 * n0 + 1 - shift] += J * condition->value * x[0] * phi[1]; // n0.y - 1
+					theProblem->system->B[2 * n0 + 1 - shift] += J * condition->value * x[1] * phi[0]; // n0.y - 2
+					theProblem->system->B[2 * n1 + 1 - shift] += J * condition->value * x[0] * phi[1]; // n1.y - 1
+					theProblem->system->B[2 * n1 + 1 - shift] += J * condition->value * x[1] * phi[0]; // n1.y - 2
+				}
+			}
+
+			if (condType == NEUMANN_N || condType == NEUMANN_T) {
+				n0 = theMesh->number[n0];
+				n1 = theMesh->number[n1];
+				double* unitVec = condType == NEUMANN_N ? N : T;
+				B[2 * n0] += J * condition->value * unitVec[2 * i];
+				B[2 * n0 + 1] += J * condition->value * unitVec[2 * i + 1];
+				B[2 * n1] += J * condition->value * unitVec[2 * (i + 1)];
+				B[2 * n1 + 1] += J * condition->value * unitVec[2 * (i + 1) + 1];
+			}
+		}
+	}
+}
+
+
 femProblem* femElasticityCreate(femGeo* theGeometry,
 	double E, double nu, double rho, double g, femElasticCase iCase)
 {
@@ -789,180 +897,6 @@ int femFieldRead(int* size, int shift, double* value, const char* filename) {
 	printf("Reading field of size %d with shift %d\n", *size, shift);
 	fclose(file);
 	return *size;
-}
-
-int femMeshComputeBand(femMesh* theMesh) {
-	int iElem, j, myMax, myMin, myBand, map[4];
-	memset(map, 0, 4 * sizeof(int));
-	int nLocal = theMesh->nLocalNode;
-	myBand = 0;
-	for (iElem = 0; iElem < theMesh->nElem; iElem++) {
-		for (j = 0; j < nLocal; ++j)
-			map[j] = theMesh->number[theMesh->elem[iElem * nLocal + j]];
-		myMin = map[0];
-		myMax = map[0];
-		for (j = 1; j < nLocal; j++) {
-			myMax = fmax(map[j], myMax);
-			myMin = fmin(map[j], myMin);
-		}
-		if (myBand < (myMax - myMin)) myBand = myMax - myMin;
-	}
-
-	return(++myBand);
-}
-
-double* femBandSystemEliminate(femFullSystem* myBand) {
-}
-
-double* femSolverBandEliminate(femFullSystem* mySystem) {
-}
-
-void femMeshRenumber(femProblem* theProblem, femRenumType renumType) {
-	int i, * inverse;
-	femMesh* theMesh = theProblem->geometry->theElements;
-
-	switch (renumType) {
-	case FEM_NO:
-		for (i = 0; i < theMesh->nodes->nNodes; i++)
-			theMesh->number[i] = i;
-		break;
-	case FEM_XNUM:
-		inverse = malloc(sizeof(int) * theMesh->nodes->nNodes);
-		for (i = 0; i < theMesh->nodes->nNodes; i++)
-			inverse[i] = i;
-		femTemp = theMesh->nodes->X;
-		qsort(inverse, theMesh->nodes->nNodes, sizeof(int), femCompare);
-		for (i = 0; i < theMesh->nodes->nNodes; i++)
-			theMesh->number[inverse[i]] = i;
-		free(inverse);
-		break;
-	case FEM_YNUM:
-		inverse = malloc(sizeof(int) * theMesh->nodes->nNodes);
-		for (i = 0; i < theMesh->nodes->nNodes; i++)
-			inverse[i] = i;
-		femTemp = theMesh->nodes->Y;
-		qsort(inverse, theMesh->nodes->nNodes, sizeof(int), femCompare);
-		for (i = 0; i < theMesh->nodes->nNodes; i++)
-			theMesh->number[inverse[i]] = i;
-		free(inverse);
-		break;
-	default: Error("Unexpected renumbering option");
-	}
-}
-
-int femCompare(const void* a, const void* b) {
-	const int ia = *(const int*)a;
-	const int ib = *(const int*)b;
-	const double d = femTemp[ia] - femTemp[ib];
-	if (d < 0) return 1;
-	if (d > 0) return -1;
-	return 0;
-}
-
-void femComputeBoundaryCondition(femProblem* theProblem, femBoundaryCondition* condition, int shift) {
-	femFullSystem* theSystem = theProblem->system;
-	femMesh* theMesh = theProblem->geometry->theElements;
-	int iCase = theProblem->planarStrainStress;
-
-	double** A = theSystem->A;
-	double* B = theSystem->B;
-
-	femBoundaryType condType = condition->type;
-	int* elem = condition->domain->elem;
-	int nElem = condition->domain->nElem;
-	femMesh* condMesh = condition->domain->mesh;
-	double* X = condMesh->nodes->X;
-	double* Y = condMesh->nodes->Y;
-	double* N = condition->domain->normals;
-	double* T = condition->domain->tangents;
-	memset(T, 0, 2 * (nElem + 1) * sizeof(double));
-
-	// Tangents and normals
-	for (int e = 0; e < nElem; e++) {
-		// both nodes of segment e
-		int a = condMesh->elem[elem[e] * 2];
-		int b = condMesh->elem[elem[e] * 2 + 1];
-
-		// tangent vector
-		double dx = X[b] - X[a];
-		double dy = Y[b] - Y[a];
-
-		T[e * 2] += dx;
-		T[e * 2 + 1] += dy;
-		T[(e + 1) * 2] += dx;
-		T[(e + 1) * 2 + 1] += dy;
-
-		printf("T[%d]: %f %f \n", e, T[e * 2], T[e * 2 + 1]);
-	}
-
-	// toutes les tangentes sont définies, on les normalise
-	for (int n = 0; n < nElem + 1; n++) {
-		double norm = sqrt(T[n * 2] * T[n * 2] + T[n * 2 + 1] * T[n * 2 + 1]);
-		if (norm == 0.0)
-			Error("0,0 position for T");
-
-		T[n * 2] /= norm;
-		T[n * 2 + 1] /= norm;
-	}
-
-	// on sait que les normales sont perpendiculaires aux tangentes
-	for (int n = 0; n < nElem + 1; n++) {
-		N[n * 2] = -T[n * 2 + 1]; // N.x = -T.y
-		N[n * 2 + 1] = T[n * 2]; // N.y = T.x
-	}
-
-	for (int k = 0; k < nElem + 1; k++) {
-		printf("normale du noeud %d = (%f ; %f)\n", k, N[2 * k], N[2 * k + 1]);
-		printf("tangente du noeud %d = (%f ; %f)\n", k, T[2 * k], T[2 * k + 1]);
-	}
-	//
-
-	printf("[Boundary condition of type %d for domain %s (%d elems)]\n", condType, condition->domain->name, nElem);
-
-	if (condType >= NEUMANN_X && condType <= NEUMANN_T) {
-		for (int i = 0; i < nElem; i++) {
-			int n0 = condMesh->elem[2 * elem[i]];
-			int n1 = condMesh->elem[2 * elem[i] + 1];
-
-			double J = 0.5 * sqrt((X[n0] - X[n1]) * (X[n0] - X[n1]) +
-				(Y[n1] - Y[n0]) * (Y[n1] - Y[n0]));
-
-			if (condType == NEUMANN_X || condType == NEUMANN_Y) {
-				double phi[2] = { 1,1 };
-				double x[2] = { 1,1 };
-
-				if (iCase == AXISYM) {
-					phi[0] = (1 + sqrt(3)) * 0.5;
-					phi[1] = (1 - sqrt(3)) * 0.5;
-					x[0] = X[n0] * phi[1] + X[n1] * phi[0];
-					x[1] = X[n0] * phi[0] + X[n1] * phi[1];
-				}
-
-				n0 = theMesh->number[n0];
-				n1 = theMesh->number[n1];
-				theProblem->system->B[2 * n0 + shift] += J * condition->value * x[0] * phi[1];
-				theProblem->system->B[2 * n0 + shift] += J * condition->value * x[1] * phi[0];
-				theProblem->system->B[2 * n1 + shift] += J * condition->value * x[0] * phi[1];
-				theProblem->system->B[2 * n1 + shift] += J * condition->value * x[1] * phi[0];
-				if (shift == -1) {
-					theProblem->system->B[2 * n0 + 1 - shift] += J * condition->value * x[0] * phi[1];
-					theProblem->system->B[2 * n0 + 1 - shift] += J * condition->value * x[1] * phi[0];
-					theProblem->system->B[2 * n1 + 1 - shift] += J * condition->value * x[0] * phi[1];
-					theProblem->system->B[2 * n1 + 1 - shift] += J * condition->value * x[1] * phi[0];
-				}
-			}
-
-			if (condType == NEUMANN_N || condType == NEUMANN_T) {
-				n0 = theMesh->number[n0];
-				n1 = theMesh->number[n1];
-				double* unitVec = condType == NEUMANN_N ? N : T;
-				B[2 * n0] += J * condition->value * unitVec[2 * i];
-				B[2 * n0 + 1] += J * condition->value * unitVec[2 * i + 1];
-				B[2 * n1] += J * condition->value * unitVec[2 * (i + 1)];
-				B[2 * n1 + 1] += J * condition->value * unitVec[2 * (i + 1) + 1];
-			}
-		}
-	}
 }
 
 double femMin(double* x, int n)

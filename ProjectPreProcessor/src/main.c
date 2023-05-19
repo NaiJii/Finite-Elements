@@ -68,7 +68,7 @@ int main(void)
 	double E = 220.e9;
 	double nu = 0.3;
 	double rho = 7.85e3;
-	double g = 9.81;
+	double g = 9.81*0.;
 	femProblem* theProblem = femElasticityCreate(theGeometry, E, nu, rho, g, PLANAR_STRAIN);
 
 #ifdef OUR_GEO
@@ -79,13 +79,20 @@ int main(void)
 	// The Neumann boundary conditions are used to impose the forces on the boundary.
 	// In the case of a gas bottle,
 	// We want no displacement on the bottom of the bottle (Dirichlet boundary conditions)
+	// femElasticityAddBoundaryCondition(theProblem, "Bottom", DIRICHLET_X, 0.0);
 	femElasticityAddBoundaryCondition(theProblem, "Bottom", DIRICHLET_Y, 0.0);
 	// The gas is pushing from within the bottle (Neumann boundary conditions)
+
+	// Avg pressure on a gaz tank is 10 bar at around 30-35 °C 
+	// (https://www.obelink.fr/conseils/pourquoi-un-detendeur-de-gaz-sur-une-bouteille-de-gaz.html#:~:text=En%20r%C3%A8gle%20g%C3%A9n%C3%A9rale%2C%20la%20pression,de%2030%20ou%2050%20millibars*.)
+	// 10 bar == 1e6 N/m^2
+
+
 	double gazPression = 500;
 	femElasticityAddBoundaryCondition(theProblem, "LeftIn", NEUMANN_N, -gazPression); // Towards the inside.
 	femElasticityAddBoundaryCondition(theProblem, "RightIn", NEUMANN_N, -gazPression); // Towards the inside.
-	femElasticityAddBoundaryCondition(theProblem, "TopIn", NEUMANN_N, -gazPression); // Towards the inside.
-	femElasticityAddBoundaryCondition(theProblem, "BottomIn", NEUMANN_N, -gazPression); // Towards the inside.
+	//femElasticityAddBoundaryCondition(theProblem, "TopIn", NEUMANN_N, -gazPression); // Towards the inside.
+	//femElasticityAddBoundaryCondition(theProblem, "BottomIn", NEUMANN_N, -gazPression); // Towards the inside.
 
 	femElasticityPrint(theProblem);
 	femElasticityWrite(theProblem, "../../../../data/problem.txt");

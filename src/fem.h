@@ -153,13 +153,9 @@ double* femFullSystemEliminate(femFullSystem* mySystem);
 void                femFullSystemConstrain(femFullSystem* mySystem, int myNode, double value);
 
 //
-int                 femMeshComputeBand(femMesh* theMesh);
-double* femBandSystemEliminate(femFullSystem* myBand);
-double* femSolverBandEliminate(femFullSystem* mySystem);
-void                femMeshRenumber(femProblem* theProblem, femRenumType renumType);
-int                 femCompare(const void* a, const void* b);
 void				femComputeBoundaryCondition(femProblem* theProblem, femBoundaryCondition* condition);
 //
+
 double              femMin(double* x, int n);
 double              femMax(double* x, int n);
 void                femError(char* text, int line, char* file);

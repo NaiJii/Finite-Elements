@@ -7,6 +7,82 @@
 //  (3) Ajouter les conditions en normal et tangentiel !   (strongly advised)
 //  (4) Et remplacer le solveur plein par un truc un fifrelin plus subtil  (mandatory)
 
+// Note:
+// fem.c est légèrement modifié, pour ajouter les conditions nécessaires
+// aussi, 
+// femComputeBoundaryCondition(theProblem, theBoundary)
+// est appelé dans femElasticityAddBoundaryCondition.
+
+double* femTemp = NULL;
+
+int femMeshComputeBand(femMesh* theMesh) {
+	int iElem, j, myMax, myMin, myBand, map[4];
+	memset(map, 0, 4 * sizeof(int));
+	int nLocal = theMesh->nLocalNode;
+	myBand = 0;
+	for (iElem = 0; iElem < theMesh->nElem; iElem++) {
+		for (j = 0; j < nLocal; ++j)
+			map[j] = theMesh->number[theMesh->elem[iElem * nLocal + j]];
+		myMin = map[0];
+		myMax = map[0];
+		for (j = 1; j < nLocal; j++) {
+			myMax = fmax(map[j], myMax);
+			myMin = fmin(map[j], myMin);
+		}
+		if (myBand < (myMax - myMin)) myBand = myMax - myMin;
+	}
+
+	return(++myBand);
+}
+
+double* femBandSystemEliminate(femFullSystem* myBand) {
+}
+
+double* femSolverBandEliminate(femFullSystem* mySystem) {
+}
+
+void femMeshRenumber(femProblem* theProblem, femRenumType renumType) {
+	int i, * inverse;
+	femMesh* theMesh = theProblem->geometry->theElements;
+
+	switch (renumType) {
+	case FEM_NO:
+		for (i = 0; i < theMesh->nodes->nNodes; i++)
+			theMesh->number[i] = i;
+		break;
+	case FEM_XNUM:
+		inverse = malloc(sizeof(int) * theMesh->nodes->nNodes);
+		for (i = 0; i < theMesh->nodes->nNodes; i++)
+			inverse[i] = i;
+		femTemp = theMesh->nodes->X;
+		qsort(inverse, theMesh->nodes->nNodes, sizeof(int), femCompare);
+		for (i = 0; i < theMesh->nodes->nNodes; i++)
+			theMesh->number[inverse[i]] = i;
+		free(inverse);
+		break;
+	case FEM_YNUM:
+		inverse = malloc(sizeof(int) * theMesh->nodes->nNodes);
+		for (i = 0; i < theMesh->nodes->nNodes; i++)
+			inverse[i] = i;
+		femTemp = theMesh->nodes->Y;
+		qsort(inverse, theMesh->nodes->nNodes, sizeof(int), femCompare);
+		for (i = 0; i < theMesh->nodes->nNodes; i++)
+			theMesh->number[inverse[i]] = i;
+		free(inverse);
+		break;
+	default: Error("Unexpected renumbering option");
+	}
+}
+
+int femCompare(const void* a, const void* b) {
+	const int ia = *(const int*)a;
+	const int ib = *(const int*)b;
+	const double d = femTemp[ia] - femTemp[ib];
+	if (d < 0) return 1;
+	if (d > 0) return -1;
+	return 0;
+}
+
 double* femElasticitySolve(femProblem* theProblem) {
 	femFullSystem* theSystem = theProblem->system;
 	femIntegration* theRule = theProblem->rule;
@@ -127,9 +203,8 @@ double* femElasticitySolve(femProblem* theProblem) {
 			double value = theProblem->conditions[theConstrainedNodes[i]]->value;
 			femBoundaryType type = theProblem->conditions[theConstrainedNodes[i]]->type;
 
-			if (type == DIRICHLET_X || type == DIRICHLET_Y) {
+			if (type >= DIRICHLET_X && type <= DIRICHLET_T) 
 				femFullSystemConstrain(theSystem, i, value);
-			}
 		}
 	}
 

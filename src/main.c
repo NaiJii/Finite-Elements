@@ -12,11 +12,25 @@
 
 #include "fem.h"
 
-int main(void)
-{
+int main(char argc, char* argv[]) {
+	if (argc != 1 && argc != 3)
+		Error("Usage : main [meshfile problemfile]");
+
 	femGeo* theGeometry = geoGetGeometry();
-	geoMeshRead("../../../data/mesh.txt");
-	femProblem* theProblem = femElasticityRead(theGeometry, "../../../data/problem.txt");
+	femProblem* theProblem = NULL;
+
+	if (argc == 1) {
+		geoMeshRead("../../../data/mesh.txt");
+		theProblem = femElasticityRead(theGeometry, "../../../data/problem.txt");
+	}
+	else {
+		geoMeshRead(argv[1]);
+		theProblem = femElasticityRead(theGeometry, argv[2]);
+	}
+
+	if (!theProblem)
+		Error("No problem!(or maybe yes)");
+
 	femElasticityPrint(theProblem);
 	double* theSoluce = femElasticitySolve(theProblem);
 	femNodes* theNodes = theGeometry->theNodes;

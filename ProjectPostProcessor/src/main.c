@@ -49,7 +49,7 @@ int main(void)
 	double* Xdef = malloc(n * sizeof(double));
 	double* Ydef = malloc(n * sizeof(double));
 
-	double deformationFactor = 4e5;
+	double deformationFactor = 4e6;
 	double* normDisplacement = malloc(n * sizeof(double));
 
 	for (int i = 0; i < n; i++) {
@@ -98,7 +98,7 @@ int main(void)
 
 		if (t - told > 0.5) { freezingButton = FALSE; }
 		if (mode == 4 || mode == 5) {
-			const int frames = 40;
+			const int frames = 120;
 			double* delta = malloc(n * sizeof(double));
 			double* field = normDisplacement;
 			double min = hMin;
@@ -126,7 +126,7 @@ int main(void)
 				glfemPlotField(theGeometry->theElements, field);
 				glfemPlotMesh(theGeometry->theElements);
 				glColor3f(1.0, 0.0, 0.0); glfemMessage(theMessage);
-				_sleep(100);
+				_sleep(10);
 				glfwSwapBuffers(window);
 				glfwPollEvents();
 				glfwGetFramebufferSize(window, &w, &h);
@@ -171,6 +171,7 @@ int main(void)
 			glColor3f(1.0, 0.0, 0.0); glfemMessage(theMessage);
 		}
 
+		_sleep(100);
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	} while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
