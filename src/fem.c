@@ -244,7 +244,7 @@ int geoGetDomain(char* name)
 	int nDomains = theGeometry.nDomains;
 	for (int iDomain = 0; iDomain < nDomains; iDomain++) {
 		femDomain* theDomain = theGeometry.theDomains[iDomain];
-		if (_strnicmp(name, theDomain->name, MAXNAME) == 0)
+		if (strncasecmp(name, theDomain->name, MAXNAME) == 0)
 			theIndex = iDomain;
 	}
 	return theIndex;
@@ -566,12 +566,6 @@ void femComputeBoundaryCondition(femProblem* theProblem, femBoundaryCondition* c
 		N[n * 2 + 1] = T[n * 2]; // N.y = T.x
 	}
 
-	for (int k = 0; k < nElem + 1; k++) {
-		printf("normale du noeud %d = (%f ; %f)\n", k, N[2 * k], N[2 * k + 1]);
-		printf("tangente du noeud %d = (%f ; %f)\n", k, T[2 * k], T[2 * k + 1]);
-	}
-	//
-
 	printf("[Boundary condition of type %d for domain %s (%d elems)]\n", condType, condition->domain->name, nElem);
 
 	if (condType >= NEUMANN_X && condType <= NEUMANN_T) {
@@ -802,7 +796,8 @@ femProblem* femElasticityRead(femGeo* theGeometry, const char* filename)
 	}
 	theProblem->system = femFullSystemCreate(size);
 
-	femMeshRenumber(theProblem, FEM_NO); // Renumbering
+	
+	femMeshRenumber(theProblem, FEM_XNUM); // Renumbering
 
 	char theLine[MAXNAME];
 	char theDomain[MAXNAME];
@@ -812,44 +807,44 @@ femProblem* femElasticityRead(femGeo* theGeometry, const char* filename)
 
 	while (!feof(file)) {
 		ErrorScan(fscanf(file, "%19[^\n]s \n", (char*)&theLine));
-		if (_strnicmp(theLine, "Type of problem     ", 19) == 0) {
+		if (strncasecmp(theLine, "Type of problem     ", 19) == 0) {
 			ErrorScan(fscanf(file, ":  %[^\n]s \n", (char*)&theArgument));
-			if (_strnicmp(theArgument, "Planar stresses", 13) == 0)
+			if (strncasecmp(theArgument, "Planar stresses", 13) == 0)
 				theProblem->planarStrainStress = PLANAR_STRESS;
-			if (_strnicmp(theArgument, "Planar strains", 13) == 0)
+			if (strncasecmp(theArgument, "Planar strains", 13) == 0)
 				theProblem->planarStrainStress = PLANAR_STRAIN;
-			if (_strnicmp(theArgument, "Axi-symetric problem", 13) == 0)
+			if (strncasecmp(theArgument, "Axi-symetric problem", 13) == 0)
 				theProblem->planarStrainStress = AXISYM;
 		}
-		if (_strnicmp(theLine, "Young modulus       ", 19) == 0) {
+		if (strncasecmp(theLine, "Young modulus       ", 19) == 0) {
 			ErrorScan(fscanf(file, ":  %le\n", &theProblem->E));
 		}
-		if (_strnicmp(theLine, "Poisson ratio       ", 19) == 0) {
+		if (strncasecmp(theLine, "Poisson ratio       ", 19) == 0) {
 			ErrorScan(fscanf(file, ":  %le\n", &theProblem->nu));
 		}
-		if (_strnicmp(theLine, "Mass density        ", 19) == 0) {
+		if (strncasecmp(theLine, "Mass density        ", 19) == 0) {
 			ErrorScan(fscanf(file, ":  %le\n", &theProblem->rho));
 		}
-		if (_strnicmp(theLine, "Gravity             ", 19) == 0) {
+		if (strncasecmp(theLine, "Gravity             ", 19) == 0) {
 			ErrorScan(fscanf(file, ":  %le\n", &theProblem->g));
 		}
-		if (_strnicmp(theLine, "Boundary condition  ", 19) == 0) {
+		if (strncasecmp(theLine, "Boundary condition  ", 19) == 0) {
 			ErrorScan(fscanf(file, ":  %19s = %le : %[^\n]s\n", (char*)&theArgument, &value, (char*)&theDomain));
-			if (_strnicmp(theArgument, "Dirichlet-X", 19) == 0)
+			if (strncasecmp(theArgument, "Dirichlet-X", 19) == 0)
 				typeCondition = DIRICHLET_X;
-			if (_strnicmp(theArgument, "Dirichlet-Y", 19) == 0)
+			if (strncasecmp(theArgument, "Dirichlet-Y", 19) == 0)
 				typeCondition = DIRICHLET_Y;
-			if (_strnicmp(theArgument, "Dirichlet-N", 19) == 0)
+			if (strncasecmp(theArgument, "Dirichlet-N", 19) == 0)
 				typeCondition = DIRICHLET_N;
-			if (_strnicmp(theArgument, "Dirichlet-T", 19) == 0)
+			if (strncasecmp(theArgument, "Dirichlet-T", 19) == 0)
 				typeCondition = DIRICHLET_T;
-			if (_strnicmp(theArgument, "Neumann-X", 19) == 0)
+			if (strncasecmp(theArgument, "Neumann-X", 19) == 0)
 				typeCondition = NEUMANN_X;
-			if (_strnicmp(theArgument, "Neumann-Y", 19) == 0)
+			if (strncasecmp(theArgument, "Neumann-Y", 19) == 0)
 				typeCondition = NEUMANN_Y;
-			if (_strnicmp(theArgument, "Neumann-N", 19) == 0)
+			if (strncasecmp(theArgument, "Neumann-N", 19) == 0)
 				typeCondition = NEUMANN_N;
-			if (_strnicmp(theArgument, "Neumann-T", 19) == 0)
+			if (strncasecmp(theArgument, "Neumann-T", 19) == 0)
 				typeCondition = NEUMANN_T;
 			femElasticityAddBoundaryCondition(theProblem, theDomain, typeCondition, value);
 		}

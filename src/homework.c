@@ -13,7 +13,10 @@
 // femComputeBoundaryCondition(theProblem, theBoundary)
 // est appelé dans femElasticityAddBoundaryCondition.
 
+// renumbering - fem.c L800
+
 #define SOLVER_BAND
+#define TIMER
 
 double* femTemp = NULL;
 

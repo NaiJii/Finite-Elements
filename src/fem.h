@@ -21,7 +21,9 @@
 #define FALSE 0
 #define TRUE  1
 #define MAXNAME 256
-
+#ifdef WIN32
+#define strncasecmp _strnicmp
+#endif
 typedef enum { FEM_TRIANGLE, FEM_QUAD } femElementType;
 typedef enum {
 	DIRICHLET_X, DIRICHLET_Y, DIRICHLET_N, DIRICHLET_T,
