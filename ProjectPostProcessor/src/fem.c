@@ -663,45 +663,56 @@ void femElasticityAddBoundaryCondition(femProblem *theProblem, char *nameDomain,
         theProblem->conditions = realloc(theProblem->conditions, size*sizeof(femBoundaryCondition*));
     theProblem->conditions[size-1] = theBoundary;
     
-    int shift;
-    if (type == DIRICHLET_X || type == NEUMANN_X)  shift = 0;      
-    if (type == DIRICHLET_Y || type == NEUMANN_Y)  shift = 1;  
-    int *elem = theBoundary->domain->elem;
+    int shift = -1;
+    if (type == DIRICHLET_X || type == NEUMANN_X) shift = 0;
+    else if (type == DIRICHLET_Y || type == NEUMANN_Y) shift = 1;
+
+    int* elem = theBoundary->domain->elem;
     int nElem = theBoundary->domain->nElem;
-    for (int e=0; e<nElem; e++) {
-        for (int i=0; i<2; i++) {
-            int node = theBoundary->domain->mesh->elem[2*elem[e]+i];
-            theProblem->constrainedNodes[2*node+shift] = size-1; }}    
+    for (int e = 0; e < nElem; e++) {
+        for (int i = 0; i < 2; i++) {
+            int node = theBoundary->domain->mesh->elem[2 * elem[e] + i];
+            if (shift != -1)
+                theProblem->constrainedNodes[2 * node + shift] = size - 1;
+            else {
+                theProblem->constrainedNodes[2 * node] = size - 1;
+                theProblem->constrainedNodes[2 * node + 1] = size - 1;
+            }
+        }
+    }
+
+    // ...
 }
 
-void femElasticityPrint(femProblem *theProblem)  
-{    
+void femElasticityPrint(femProblem* theProblem)
+{
     printf("\n\n ======================================================================================= \n\n");
     printf(" Linear elasticity problem \n");
-    printf("   Young modulus   E   = %14.7e [N/m2]\n",theProblem->E);
-    printf("   Poisson's ratio nu  = %14.7e [-]\n",theProblem->nu);
-    printf("   Density         rho = %14.7e [kg/m3]\n",theProblem->rho);
-    printf("   Gravity         g   = %14.7e [m/s2]\n",theProblem->g);
-    
+    printf("   Young modulus   E   = %14.7e [N/m2]\n", theProblem->E);
+    printf("   Poisson's ratio nu  = %14.7e [-]\n", theProblem->nu);
+    printf("   Density         rho = %14.7e [kg/m3]\n", theProblem->rho);
+    printf("   Gravity         g   = %14.7e [m/s2]\n", theProblem->g);
+
     if (theProblem->planarStrainStress == PLANAR_STRAIN)  printf("   Planar strains formulation \n");
     if (theProblem->planarStrainStress == PLANAR_STRESS)  printf("   Planar stresses formulation \n");
     if (theProblem->planarStrainStress == AXISYM)         printf("   Axisymmetric formulation \n");
 
-    
+
     printf("   Boundary conditions : \n");
-    for(int i=0; i < theProblem->nBoundaryConditions; i++) {
-          femBoundaryCondition *theCondition = theProblem->conditions[i];
-          double value = theCondition->value;
-          printf("  %20s :",theCondition->domain->name);
-          if (theCondition->type == DIRICHLET_X)  printf(" imposing %9.2e as the horizontal displacement  \n", value);
-          if (theCondition->type == DIRICHLET_Y)  printf(" imposing %9.2e as the vertical displacement  \n", value);
-          if (theCondition->type == DIRICHLET_N)  printf(" imposing %9.2e as the normal displacement  \n", value);
-          if (theCondition->type == DIRICHLET_T)  printf(" imposing %9.2e as the tangent displacement  \n", value);
-          if (theCondition->type == NEUMANN_X)  printf(" imposing %9.2e as the horizontal pression  \n", value);
-          if (theCondition->type == NEUMANN_Y)  printf(" imposing %9.2e as the vertical pression  \n", value);
-          if (theCondition->type == NEUMANN_N)  printf(" imposing %9.2e as the normal pression  \n", value);
-          if (theCondition->type == NEUMANN_T)  printf(" imposing %9.2e as the tangent pression  \n", value);
-    printf(" ======================================================================================= \n\n");
+    for (int i = 0; i < theProblem->nBoundaryConditions; i++) {
+        femBoundaryCondition* theCondition = theProblem->conditions[i];
+        double value = theCondition->value;
+        printf("  %20s :", theCondition->domain->name);
+        if (theCondition->type == DIRICHLET_X)  printf(" imposing %9.2e as the horizontal displacement  \n", value);
+        if (theCondition->type == DIRICHLET_Y)  printf(" imposing %9.2e as the vertical displacement  \n", value);
+        if (theCondition->type == DIRICHLET_N)  printf(" imposing %9.2e as the normal displacement  \n", value);
+        if (theCondition->type == DIRICHLET_T)  printf(" imposing %9.2e as the tangent displacement  \n", value);
+        if (theCondition->type == NEUMANN_X)  printf(" imposing %9.2e as the horizontal pression  \n", value);
+        if (theCondition->type == NEUMANN_Y)  printf(" imposing %9.2e as the vertical pression  \n", value);
+        if (theCondition->type == NEUMANN_N)  printf(" imposing %9.2e as the normal pression  \n", value);
+        if (theCondition->type == NEUMANN_T)  printf(" imposing %9.2e as the tangent pression  \n", value);
+        printf(" ======================================================================================= \n\n");
+    }
 }
 
 

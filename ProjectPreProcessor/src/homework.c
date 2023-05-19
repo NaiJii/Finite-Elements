@@ -75,9 +75,9 @@ Plane Surface(1) = {1};
     int diskTopIn[] = { 2,gmshModelOccAddDisk(0.0,h / 4.0,0.0,r-t,r-t,-1,NULL,0,NULL,0,&ierr) };
     int diskBottomIn[] = { 2,gmshModelOccAddDisk(0.0,h / 4.0,0.0,r-t,r-t,-1,NULL,0,NULL,0,&ierr) };
 
-    gmshModelOccCut(rect,2,disk,2,NULL,NULL,NULL,NULL,NULL,-1,1,1,&ierr); 
-    gmshModelOccCut(rect,2,slit,2,NULL,NULL,NULL,NULL,NULL,-1,1,1,&ierr); 
-    gmshModelOccSynchronize(&ierr); 
+    //gmshModelOccCut(rect,2,disk,2,NULL,NULL,NULL,NULL,NULL,-1,1,1,&ierr); 
+    //gmshModelOccCut(rect,2,slit,2,NULL,NULL,NULL,NULL,NULL,-1,1,1,&ierr); 
+    //gmshModelOccSynchronize(&ierr); 
 
     if (theGeometry->elementType == FEM_QUAD) {
         gmshOptionSetNumber("Mesh.SaveAll",1,&ierr);

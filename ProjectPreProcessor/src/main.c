@@ -37,15 +37,14 @@ int main(void)
 								// On a aussi inversé la géomtrie pour rire !
 
 #ifdef OUR_GEO
-	geoMeshGenerate();
-
+	geoMeshGenerateGeoFile("../../../data/our_mesh.geo");   // Lecture fichier geo
 #else
-	geoMeshGenerateGeoFile("../../../data/mesh.geo");   // Lecture fichier geo
+	geoMeshGenerateGeoFile("../../../../data/mesh.geo");   // Lecture fichier geo
 #endif
 
 	geoMeshImport();
 #ifdef OUR_GEO
-	//geoMeshGenerateGeoFile("../../../data/our_mesh.geo");   // Lecture fichier geo
+	//geoMeshGenerateGeoFile("../../../../data/our_mesh.geo");   // Lecture fichier geo
 	geoSetDomainName(4, "Bottom");
 	geoSetDomainName(5, "Top");
 	geoSetDomainName(6, "LeftIn");
@@ -54,19 +53,19 @@ int main(void)
 	geoSetDomainName(9, "TopIn");
 	geoSetDomainName(0, "Left");
 	geoSetDomainName(2, "Right");
-	geoMeshWrite("../../../data/mesh.txt");
+	geoMeshWrite("../../../../data/mesh.txt");
 #else
-	//geoMeshGenerateGeoFile("../../../data/mesh.geo");   // Lecture fichier geo
+	//geoMeshGenerateGeoFile("../../../../data/mesh.geo");   // Lecture fichier geo
 	geoSetDomainName(0, "Symetry");
 	geoSetDomainName(1, "Bottom");
-	geoMeshWrite("../../../data/mesh.txt");
+	geoMeshWrite("../../../../data/mesh.txt");
 #endif
 
 	//
 	//  -2- Definition du probleme
 	//
 
-	double E = 211.e9;
+	double E = 220.e9;
 	double nu = 0.3;
 	double rho = 7.85e3;
 	double g = 9.81;
@@ -82,23 +81,19 @@ int main(void)
 	// We want no displacement on the bottom of the bottle (Dirichlet boundary conditions)
 	femElasticityAddBoundaryCondition(theProblem, "Bottom", DIRICHLET_Y, 0.0);
 	// The gas is pushing from within the bottle (Neumann boundary conditions)
-	double gazPression = 0.1;
-	femElasticityAddBoundaryCondition(theProblem, "LeftIn", NEUMANN_N, gazPression); // Towards the inside.
-	femElasticityAddBoundaryCondition(theProblem, "RightIn", NEUMANN_N, gazPression); // Towards the inside.
-	femElasticityAddBoundaryCondition(theProblem, "TopIn", NEUMANN_N, gazPression); // Towards the inside.
-	femElasticityAddBoundaryCondition(theProblem, "BottomIn", NEUMANN_N, gazPression); // Towards the inside.
-	//femElasticityAddBoundaryCondition(theProblem, "Bottom", NEUMANN_N, gazPression); // Towards the outside
-	//femElasticityAddBoundaryCondition(theProblem, "Top", NEUMANN_N, gazPression); // Towards the outside
-	//femElasticityAddBoundaryCondition(theProblem, "Left", NEUMANN_N, gazPression); // Towards the outside
-	//femElasticityAddBoundaryCondition(theProblem, "Right", NEUMANN_N, gazPression); // Towards the outside
+	double gazPression = 500;
+	femElasticityAddBoundaryCondition(theProblem, "LeftIn", NEUMANN_N, -gazPression); // Towards the inside.
+	femElasticityAddBoundaryCondition(theProblem, "RightIn", NEUMANN_N, -gazPression); // Towards the inside.
+	femElasticityAddBoundaryCondition(theProblem, "TopIn", NEUMANN_N, -gazPression); // Towards the inside.
+	femElasticityAddBoundaryCondition(theProblem, "BottomIn", NEUMANN_N, -gazPression); // Towards the inside.
 
 	femElasticityPrint(theProblem);
-	femElasticityWrite(theProblem, "../../../data/problem.txt");
+	femElasticityWrite(theProblem, "../../../../data/problem.txt");
 #else
 	femElasticityAddBoundaryCondition(theProblem, "Symetry", DIRICHLET_X, 0.0);
 	femElasticityAddBoundaryCondition(theProblem, "Bottom", DIRICHLET_Y, 0.0);
 	femElasticityPrint(theProblem);
-	femElasticityWrite(theProblem, "../../../data/problem.txt");
+	femElasticityWrite(theProblem, "../../../../data/problem.txt");
 #endif
 
 	//
