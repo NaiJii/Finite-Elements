@@ -1,4 +1,4 @@
-Désolé d'avance, ce projet a été configuré sur Windows principalement, il est possible que vous ayez des problèmes de compilation sur Linux 
+Ce projet a été configuré sur Windows principalement, il est possible que vous ayez des problèmes de compilation sur Linux 
 -bien que nous ayons fait de notre mieux pour assurer la cross-compatibility et cela ne devrait pas arriver.
 
 1. Rajouter GMSH dans chaque projet (Project, Post/Pre-Processing) et copier le dll de gmsh dans le répertoire de sortie si nécessaire.

@@ -107,6 +107,13 @@ typedef struct {
 	femFullSystem* system;
 } femProblem;
 
+typedef struct {
+	double** A;
+	double* B;
+	int size;
+	int band;
+} femBandSystem;
+
 void                geoInitialize();
 femGeo* geoGetGeometry();
 double              geoSize(double x, double y);

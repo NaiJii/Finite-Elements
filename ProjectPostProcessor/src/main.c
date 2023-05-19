@@ -49,7 +49,7 @@ int main(void)
 	double* Xdef = malloc(n * sizeof(double));
 	double* Ydef = malloc(n * sizeof(double));
 
-	double deformationFactor = 4e6;
+	double deformationFactor = 3e3;
 	double* normDisplacement = malloc(n * sizeof(double));
 
 	for (int i = 0; i < n; i++) {
@@ -90,27 +90,17 @@ int main(void)
 		t = glfwGetTime();
 		if (glfwGetKey(window, 'D') == GLFW_PRESS) { mode = 0; }
 		if (glfwGetKey(window, 'V') == GLFW_PRESS) { mode = 1; }
-		if (glfwGetKey(window, 'O') == GLFW_PRESS) { mode = 2; }
-		if (glfwGetKey(window, 'S') == GLFW_PRESS) { mode = 3; }
-		if (glfwGetKey(window, 'K') == GLFW_PRESS) { mode = 4; }
-		if (glfwGetKey(window, 'L') == GLFW_PRESS) { mode = 5; }
+		if (glfwGetKey(window, 'K') == GLFW_PRESS) { mode = 2; }
+		if (glfwGetKey(window, 'L') == GLFW_PRESS) { mode = 3; }
 		if (glfwGetKey(window, 'N') == GLFW_PRESS && freezingButton == FALSE) { domain++; freezingButton = TRUE; told = t; }
 
 		if (t - told > 0.5) { freezingButton = FALSE; }
-		if (mode == 4 || mode == 5) {
+		if (mode == 2 || mode == 3) {
 			const int frames = 120;
 			double* delta = malloc(n * sizeof(double));
 			double* field = normDisplacement;
 			double min = hMin;
 			double max = hMax;
-
-			if (mode == 5) {
-				/*
-				* field = stress;
-								max = hMax;
-				min = hMin;
-				*/
-			}
 
 			for (int i = 0; i < n; i++) {
 				theGeometry->theNodes->X[i] = X[i];
@@ -141,22 +131,7 @@ int main(void)
 			field[0] = field0;
 			free(delta);
 
-			mode -= 3;
-		}
-		if (mode == 3) {
-			//glfemPlotField(theGeometry->theElements, stress);
-			sprintf(theMessage, "Number of elements : %d ", theGeometry->theElements->nElem);
-			glColor3f(1.0, 0.0, 0.0); glfemMessage(theMessage);
-		}
-		if (mode == 2) {
-			memcpy(theGeometry->theElements->nodes->X, X, n * sizeof(double));
-			memcpy(theGeometry->theElements->nodes->Y, Y, n * sizeof(double));
-			glfemPlotField(theGeometry->theElements, u);
-			glfemPlotMesh(theGeometry->theElements);
-			memcpy(theGeometry->theNodes->X, Xdef, n * sizeof(double));
-			memcpy(theGeometry->theNodes->Y, Ydef, n * sizeof(double));
-			sprintf(theMessage, "Number of elements : %d ", theGeometry->theElements->nElem);
-			glColor3f(1.0, 0.0, 0.0); glfemMessage(theMessage);
+			mode = 1;
 		}
 		if (mode == 1) {
 			glfemPlotField(theGeometry->theElements, normDisplacement);

@@ -13,7 +13,18 @@
 // femComputeBoundaryCondition(theProblem, theBoundary)
 // est appelé dans femElasticityAddBoundaryCondition.
 
+#define SOLVER_BAND
+
 double* femTemp = NULL;
+
+int femCompare(const void* a, const void* b) {
+	const int ia = *(const int*)a;
+	const int ib = *(const int*)b;
+	const double d = femTemp[ia] - femTemp[ib];
+	if (d < 0) return 1;
+	if (d > 0) return -1;
+	return 0;
+}
 
 int femMeshComputeBand(femMesh* theMesh) {
 	int iElem, j, myMax, myMin, myBand, map[4];
@@ -32,13 +43,68 @@ int femMeshComputeBand(femMesh* theMesh) {
 		if (myBand < (myMax - myMin)) myBand = myMax - myMin;
 	}
 
-	return(++myBand);
+	return (++myBand) * 2;
 }
 
-double* femBandSystemEliminate(femFullSystem* myBand) {
+void femBandSystemInit(femBandSystem* myBandSystem)
+{
+	int i;
+	int size = myBandSystem->size;
+	int band = myBandSystem->band;
+	for (i = 0; i < size * (band + 1); i++)
+		myBandSystem->B[i] = 0;
 }
 
-double* femSolverBandEliminate(femFullSystem* mySystem) {
+femBandSystem* femBandSystemCreate(int size, int band)
+{
+	femBandSystem* myBandSystem = malloc(sizeof(femBandSystem));
+	myBandSystem->B = malloc(sizeof(double) * size * (band + 1));
+	myBandSystem->A = malloc(sizeof(double*) * size);
+	myBandSystem->size = size;
+	myBandSystem->band = band;
+	myBandSystem->A[0] = myBandSystem->B + size;
+	int i;
+	for (i = 1; i < size; i++)
+		myBandSystem->A[i] = myBandSystem->A[i - 1] + band - 1;
+	femBandSystemInit(myBandSystem);
+	return (myBandSystem);
+}
+
+double* femBandSystemEliminate(femBandSystem* myBand)
+{
+	double** A, * B, factor;
+	int     i, j, k, jend, size, band;
+	A = myBand->A;
+	B = myBand->B;
+	size = myBand->size;
+	band = myBand->band;
+
+	/* Incomplete Cholesky factorization */
+
+	for (k = 0; k < size; k++) {
+		if (fabs(A[k][k]) <= 1e-4) {
+			Error("Cannot eleminate with such a pivot");
+		}
+		jend = fmin(k + band, size);
+		for (i = k + 1; i < jend; i++) {
+			factor = A[k][i] / A[k][k];
+			for (j = i; j < jend; j++)
+				A[i][j] = A[i][j] - A[k][j] * factor;
+			B[i] = B[i] - B[k] * factor;
+		}
+	}
+
+	/* Back-substitution */
+
+	for (i = (size - 1); i >= 0; i--) {
+		factor = 0;
+		jend = fmin(i + band, size);
+		for (j = i + 1; j < jend; j++)
+			factor += A[i][j] * B[j];
+		B[i] = (B[i] - factor) / A[i][i];
+	}
+
+	return(myBand->B);
 }
 
 void femMeshRenumber(femProblem* theProblem, femRenumType renumType) {
@@ -72,15 +138,6 @@ void femMeshRenumber(femProblem* theProblem, femRenumType renumType) {
 		break;
 	default: Error("Unexpected renumbering option");
 	}
-}
-
-int femCompare(const void* a, const void* b) {
-	const int ia = *(const int*)a;
-	const int ib = *(const int*)b;
-	const double d = femTemp[ia] - femTemp[ib];
-	if (d < 0) return 1;
-	if (d > 0) return -1;
-	return 0;
 }
 
 double* femElasticitySolve(femProblem* theProblem) {
@@ -120,7 +177,6 @@ double* femElasticitySolve(femProblem* theProblem) {
 	double* B = theSystem->B;
 
 	int bandWidth = femMeshComputeBand(theMesh);
-	printf("band = %d\n, size = %d\n", bandWidth, theSystem->size);
 
 	for (iElem = 0; iElem < theMesh->nElem; iElem++) {
 		for (j = 0; j < nLocal; j++) {
@@ -208,7 +264,46 @@ double* femElasticitySolve(femProblem* theProblem) {
 		}
 	}
 
+	double* renumB = malloc(theSystem->size * sizeof(double));
+	if (!renumB)
+		Error("Allocation error");
+
+	// pivots
+	for (int k = 0; k < theSystem->size / 2; k++) {
+		if ((A[2 * k][2 * k] == 0) && (A[2 * k + 1][2 * k + 1] == 0)) {
+			printf("Fixing disconnected node %d\n", k);
+			A[2 * k][2 * k] = 1;
+			A[2 * k + 1][2 * k + 1] = 1;
+		}
+	}
+
+#ifdef SOLVER_BAND
+	bandWidth = bandWidth * 2 + 1;
+	femBandSystem* theBandSystem = femBandSystemCreate(theSystem->size, bandWidth);
+	printf("Solving Ax=b using band solver\n");
+
+	for (i = 0; i < theSystem->size; i++) {
+		int jmin = (0 > i - bandWidth / 2) ? 0 : i - bandWidth / 2;
+		int jmax = (theSystem->size < i + bandWidth / 2 + 1) ? theSystem->size : i + bandWidth / 2 + 1;
+		for (j = jmin; j < jmax; j++) {
+			theBandSystem->A[i][j] = A[i][j];
+		}
+
+		theBandSystem->B[i] = theSystem->B[i];
+	}
+
+	theBandSystem->B = femBandSystemEliminate(theBandSystem);
+	memcpy(renumB, theBandSystem->B, theSystem->size * sizeof(double));
+#else 
+	printf("Solving Ax=b using full solver\n");
 	B = femFullSystemEliminate(theSystem);
+	memcpy(renumB, B, theSystem->size * sizeof(double));
+#endif
+
+	for (i = 0; i < theMesh->nodes->nNodes; i++) {
+		B[2 * i] = renumB[2 * theMesh->number[i]];
+		B[2 * i + 1] = renumB[2 * theMesh->number[i] + 1];
+	}
 
 	free(x);
 	free(y);

@@ -35,6 +35,8 @@ void geoFree()
 	}
 	for (int i = 0; i < theGeometry.nDomains; i++) {
 		free(theGeometry.theDomains[i]->elem);
+		free(theGeometry.theDomains[i]->normals);
+		free(theGeometry.theDomains[i]->tangents);
 		free(theGeometry.theDomains[i]);
 	}
 	free(theGeometry.theDomains);
@@ -708,7 +710,7 @@ void femElasticityAddBoundaryCondition(femProblem* theProblem, char* nameDomain,
 		}
 	}
 
-	femComputeBoundaryCondition(theProblem, theBoundary);
+	femComputeBoundaryCondition(theProblem, theBoundary, shift);
 }
 
 void femElasticityPrint(femProblem* theProblem)
