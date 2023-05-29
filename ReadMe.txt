@@ -16,4 +16,6 @@ Si vous voulez juste observer le résultat final, seul les points 1., 4. et 5. so
 Notre simulation porte sur une bonbonne de gaz subissant une pression sur toutes ses parois internes (en négligeant la pression externe).
 Vous pourrez trouver les détails de pression dans notre main.c de PreProcessing et dans le rapport.
 
+Les différents détails d'implémentation sont disponibles dans homework.c du Projet.
+
 Merci d'avoir lu ce README, nous espérons que vous apprécierez notre projet.

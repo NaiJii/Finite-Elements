@@ -797,7 +797,7 @@ femProblem* femElasticityRead(femGeo* theGeometry, const char* filename)
 	theProblem->system = femFullSystemCreate(size);
 
 	
-	femMeshRenumber(theProblem, FEM_XNUM); // Renumbering
+	femMeshRenumber(theProblem, FEM_NO); // Renumbering
 
 	char theLine[MAXNAME];
 	char theDomain[MAXNAME];

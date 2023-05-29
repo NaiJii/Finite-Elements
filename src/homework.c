@@ -16,7 +16,6 @@
 // renumbering - fem.c L800
 
 #define SOLVER_BAND
-#define TIMER
 
 double* femTemp = NULL;
 
@@ -271,6 +270,7 @@ double* femElasticitySolve(femProblem* theProblem) {
 	if (!renumB)
 		Error("Allocation error");
 
+#ifdef SOLVER_BAND
 	// pivots
 	for (int k = 0; k < theSystem->size / 2; k++) {
 		if ((A[2 * k][2 * k] == 0) && (A[2 * k + 1][2 * k + 1] == 0)) {
@@ -280,7 +280,6 @@ double* femElasticitySolve(femProblem* theProblem) {
 		}
 	}
 
-#ifdef SOLVER_BAND
 	bandWidth = bandWidth * 2 + 1;
 	femBandSystem* theBandSystem = femBandSystemCreate(theSystem->size, bandWidth);
 	printf("Solving Ax=b using band solver\n");
